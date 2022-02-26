@@ -1,0 +1,6 @@
+alertmanager:
+  enabled: false
+
+server:
+  persistentVolume:
+    storageClass: "gp2"

@@ -1,0 +1,40 @@
+{{ range .Values.jobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+    name: "{{ $.Release.Name }}-{{ .name }}"
+spec:
+    schedule: {{ .schedule }}
+    successfulJobsHistoryLimit: 1
+    failedJobsHistoryLimit: 1
+    concurrencyPolicy: Forbid
+    jobTemplate:
+        spec:
+            backoffLimit: 0
+            template:
+                spec:
+                    containers:
+                        - name: "{{ $.Release.Name }}-{{ .name }}-worker"
+                          image: "{{ $.Values.backend.image }}:{{ $.Values.application.gitSHA }}"
+                          command: {{ .command }}
+                          args: {{ .args }}
+                          {{ if .maxMemory }}
+                          resources:
+                            requests:
+                              memory: {{ .maxMemory }}
+                            limits:
+                              memory: {{ .maxMemory }}
+                          {{ end }}
+                          env:
+                              - name: REDIS_URL
+                                value: "redis://{{ $.Release.Name }}-redis:{{ $.Values.redis.port }}/0"
+                              - name: SENTRY_DSN
+                                valueFrom:
+                                  secretKeyRef:
+                                    name: "{{ $.Release.Name }}-secret-tokens"
+                                    key: sentry-url
+                    imagePullSecrets:
+                        - name: "{{ $.Release.Name }}-dockerconfigjson-github-com"
+                    restartPolicy: Never
+{{ end }}

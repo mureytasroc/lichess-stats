@@ -1,0 +1,7 @@
+apiVersion: v2
+name: chess-wins-net
+description: A helm chart to deploy ChessWins.net
+
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

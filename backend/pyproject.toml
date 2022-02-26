@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "chess-wins-net"
+version = "0.1.0"
+description = "A website for analyzing the graph of wins on chess.com."
+authors = [
+    "Charles Cunningham <mureytasroc@gmail.com>",
+    "Jay Vishwarupe <jayvish@seas.upenn.edu>",
+    "Larry Huang <huangl24@seas.upenn.edu>",
+    "Rohan Gupta <grohan@seas.upenn.edu>",
+    "Rohan Verma <rover@seas.upenn.edu>"
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+uvicorn = "^0.17.5"
+fastapi = "^0.74.1"
+pytest = "^7.0.1"
+
+[tool.poetry.dev-dependencies]
+black = "^22.1.0"
+flake8 = "^4.0.1"
+isort = "^5.10.1"
+
+[build-system]
+requires = ["poetry>=1.1.13"]
+build-backend = "poetry.masonry.api"

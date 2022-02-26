@@ -1,0 +1,30 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: {{ .Release.Name }}-redis
+spec:
+    replicas: {{ .Values.redis.replicas }}
+    selector:
+        matchLabels:
+            app: {{ .Release.Name }}-redis
+    template:
+        metadata:
+            labels:
+                app: {{ .Release.Name }}-redis
+        spec:
+            containers:
+                - name: {{ .Release.Name }}-redis
+                  image: '{{ .Values.redis.image }}:{{ .Values.redis.tag }}'
+                  ports:
+                      - containerPort: {{ .Values.redis.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: {{ .Release.Name }}-redis
+spec:
+    selector:
+        app: {{ .Release.Name }}-redis
+    ports:
+        - port: {{ .Values.redis.port }}

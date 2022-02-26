@@ -1,0 +1,30 @@
+application:
+  host: chesswins.net
+
+jobs:
+  - name: load-data
+    schedule: "0 4 * * *" # run at 4am GMT daily
+    command: '["python"]'
+    args: '["loaddata"]'
+    maxMemory: "1Gi"
+  - name: recommend-articles
+    schedule: "0 * * * *"
+    command: '["npm"]'
+    args: '["run", "recommend-articles"]'
+    maxMemory: "1Gi"
+
+redis:
+  image: redis
+  tag: "6.2"
+  port: 6379
+  replicas: 1
+
+backend:
+  image: ghcr.io/mureytasroc/pennbook/backend
+  port: 8000
+  replicas: 1
+
+frontend:
+  image: ghcr.io/mureytasroc/pennbook/frontend
+  port: 3000
+  replicas: 1

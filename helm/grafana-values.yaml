@@ -1,0 +1,23 @@
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - grafana.pennbook.app
+  tls:
+    - hosts:
+        - grafana.pennbook.app
+      secretName: cloudflare-tls
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.monitoring.svc.cluster.local:80
+        access: proxy
+        isDefault: true
+
+persistence:
+  enabled: true
+  storageClassName: "gp2"
