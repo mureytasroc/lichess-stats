@@ -8,3 +8,5 @@ def load_sql(file_name: str) -> str:
 
 drop_tables = load_sql("drop_tables")
 create_tables = load_sql("create_tables")
+
+upsert_players = load_sql("upsert_players")

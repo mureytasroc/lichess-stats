@@ -5,25 +5,32 @@ CREATE TABLE IF NOT EXISTS Player
      last_name              VARCHAR(64),
      bio                    VARCHAR(1024),
      country                CHAR(2),
+     
      created_at             TIMESTAMP NOT NULL,
      seen_at                TIMESTAMP,
+     
+     ultrabullet_rating     SMALLINT UNSIGNED, -- glicko2
      bullet_rating          SMALLINT UNSIGNED, -- glicko2
      blitz_rating           SMALLINT UNSIGNED, -- glicko2
      rapid_rating           SMALLINT UNSIGNED, -- glicko2
      classsical_rating      SMALLINT UNSIGNED, -- glicko2
      correspondence_rating  SMALLINT UNSIGNED, -- glicko2
+     
      fide_rating            SMALLINT UNSIGNED,
      uscf_rating            SMALLINT UNSIGNED,
      ecf_rating             SMALLINT UNSIGNED,
      title                  ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
+     
      patron                 BOOLEAN,
      verified               BOOLEAN,
      tos_violation          BOOLEAN, -- user has violated lichess TOS
+     
      num_games              INT UNSIGNED,
      num_rated              INT UNSIGNED, -- number of rated games
      wins                   INT UNSIGNED,
      losses                 INT UNSIGNED,
      draws                  INT UNSIGNED,
+     
      completion_rate        TINYINT UNSIGNED, -- 0-100
      play_time              INT UNSIGNED, -- total seconds played on lichess
      lichess_tv_time        INT UNSIGNED -- total seconds displayed on lichess tv
