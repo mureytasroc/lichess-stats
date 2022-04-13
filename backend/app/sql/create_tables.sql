@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS Player
      lichess_tv_time        INT UNSIGNED -- total seconds displayed on lichess tv
   );
 
+
 CREATE TABLE IF NOT EXISTS Game
   (
      id                     BIGINT UNSIGNED PRIMARY KEY, -- lichess_id converted to int for performance
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS Game
      start_timestamp        TIMESTAMP NOT NULL,
      
      tournament_id          CHAR(8), -- if not null, get tournament url as f"https://lichess.org/tournament/{tournament_id}"
-     category               ENUM('Bullet', 'Blitz', 'Rapid', 'Classical', 'Correspondence') NOT NULL,
+     category               ENUM('UltraBullet', 'Bullet', 'Blitz', 'Rapid', 'Classical', 'Correspondence') NOT NULL,
      time_control_base      TINYINT UNSIGNED, -- base time in minutes
      time_control_increment TINYINT UNSIGNED, -- increment in seconds
      
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS Game
      black_rating_diff      SMALLINT -- ^
   );
 
+
 CREATE TABLE IF NOT EXISTS Moves
   (
      game_id                BIGINT UNSIGNED,
@@ -73,6 +75,7 @@ CREATE TABLE IF NOT EXISTS Moves
      PRIMARY KEY(game_id, ply),
      FOREIGN KEY (game_id) REFERENCES Game(id)
   );
+
 
 CREATE TABLE IF NOT EXISTS Evaluation
   (
@@ -84,6 +87,7 @@ CREATE TABLE IF NOT EXISTS Evaluation
      PRIMARY KEY(game_id, ply),
      FOREIGN KEY (game_id) REFERENCES Game(id)
   );
+
 
 CREATE TABLE IF NOT EXISTS TimeRemaining
   (
