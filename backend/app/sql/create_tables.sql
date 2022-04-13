@@ -45,11 +45,11 @@ CREATE TABLE IF NOT EXISTS Game (
   time_control_base TINYINT UNSIGNED, -- base time in minutes
   time_control_increment TINYINT UNSIGNED, -- increment in seconds
   
-  white_username VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Player(username),
+  white_username VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
   white_elo SMALLINT UNSIGNED NOT NULL, -- glicko2
   white_title ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM', 'LM', 'BOT'),
   
-  black_username VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Player(username),
+  black_username VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
   black_elo SMALLINT UNSIGNED NOT NULL, -- glicko2
   black_title ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM', 'LM', 'BOT'),
   
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS Game (
   opening_ec0 CHAR(3) NOT NULL, -- less specific than opening_name
   
   result ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
-  termination ENUM('Normal', 'Time forfeit') NOT NULL,
+  termination ENUM('Checkmate', 'Resignation', 'Time forfeit', 'Abandoned', 'Rules infraction') NOT NULL,
   
   white_rating_diff SMALLINT, -- white's rating change from game
   black_rating_diff SMALLINT -- ^
