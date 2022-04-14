@@ -6,14 +6,14 @@ CREATE TABLE IF NOT EXISTS Player
      first_name                VARCHAR(64),
      last_name                 VARCHAR(64),
      bio                       VARCHAR(1024),
-     country                   CHAR(2),
+     country                   VARCHAR(8),
 
      fide_rating               SMALLINT UNSIGNED,
      uscf_rating               SMALLINT UNSIGNED,
      ecf_rating                SMALLINT UNSIGNED,
      title                     ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
-     created_at                TIMESTAMP NOT NULL, -- timestamp of Lichess account creation
+     created_at                TIMESTAMP, -- timestamp of Lichess account creation
      seen_at                   TIMESTAMP, -- timestamp of last Lichess visit
      
      ultrabullet_rating        SMALLINT UNSIGNED, -- glicko2 rating

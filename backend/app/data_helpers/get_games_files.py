@@ -21,6 +21,8 @@ def download_game(game_url):
     """
     os.makedirs("/tmp", exist_ok=True)
     filepath = "/tmp/" + game_url.split("/")[-1]
+    if os.path.exists(filepath):
+        return filepath
     with requests.get(game_url, stream=True) as r:
         file_size = int(r.headers.get("Content-Length", 0)) or None
         with open(filepath, "wb") as f:
@@ -29,7 +31,9 @@ def download_game(game_url):
     return filepath
 
 
-def get_games_files(from_date: str = None, to_date: str = None, ascending: bool = False):
+def get_games_files(
+    from_date: str = None, to_date: str = None, ascending: bool = False, save_files: bool = False
+):
     """
     A lazy generator of game files from database.lichess.org.
     Yields a context you can use to access the downloaded file:
@@ -44,6 +48,7 @@ def get_games_files(from_date: str = None, to_date: str = None, ascending: bool 
     :param str from_date: The date of the earliest file to get, of the form YYYY-MM.
     :param str to_date: The date of the latest file to get, of the form YYYY-MM.
     :param bool ascending: Whether to load files in ascending chronological order.
+    :param bool save_files: Whether to keep the downloaded files in /tmp.
     """
     game_urls = requests.get(settings.games_index_url).text.splitlines()
     if ascending:
@@ -67,6 +72,7 @@ def get_games_files(from_date: str = None, to_date: str = None, ascending: bool 
         def get_context():
             with bz2.open(filepath, "rt") as f:
                 yield f
-            os.remove(filepath)
+            if not save_files:
+                os.remove(filepath)
 
         yield get_context

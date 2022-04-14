@@ -12,6 +12,16 @@ mydb = pymysql.connect(
 )
 
 
+async def read_batch(batch_size):
+    all_games = []
+    all_moves = []
+    for _ in range(batch_size):
+        game, moves = read_data()
+        all_games.append(game)
+        all_moves += moves
+    return all_games, all_moves
+
+
 def read_data():
     c = 0
     with open("/Users/rohangupta/Downloads/lichess_db_standard_rated_2022-03.pgn") as f:
@@ -20,16 +30,12 @@ def read_data():
             headers = game.headers
 
             tournament_id = (
-                t[0]
-                if (t := re.findall(r"tournament/(.*)\"", headers["Event"]))
-                else None
+                t[0] if (t := re.findall(r"tournament/(.*)\"", headers["Event"])) else None
             )
 
             lichess_id = re.findall(r"org/(.*)", headers["Site"])[0]
 
-            start_timestamp = (
-                headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
-            )
+            start_timestamp = headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
 
             categories = {
                 "Bullet",
@@ -57,14 +63,10 @@ def read_data():
             black_title = headers.get("BlackTitle", None)
 
             white_rating_diff = (
-                int(headers["WhiteRatingDiff"])
-                if headers.get("WhiteRatingDiff")
-                else None
+                int(headers["WhiteRatingDiff"]) if headers.get("WhiteRatingDiff") else None
             )
             black_rating_diff = (
-                int(headers["BlackRatingDiff"])
-                if headers.get("WhiteRatingDiff")
-                else None
+                int(headers["BlackRatingDiff"]) if headers.get("WhiteRatingDiff") else None
             )
 
             opening_name = headers["Opening"]
@@ -122,9 +124,12 @@ def insert_into_db(game_values, move_values, cur):
 
 def push_data():
     with mydb.cursor() as cur:
-        for game_values, moves in read_data():
-            assert insert_into_db(game_values, moves, cur)
-        print(mydb.show_warnings())
+        games, moves = asyncio.wait([read_batch(BATCH_SIZE)])
+    try:
+        while True:
+            insert_into_db(games, moves, cur)
+    except StopIteration:
+        pass
         mydb.commit()
 
 

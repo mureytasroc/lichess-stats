@@ -49,7 +49,19 @@ parser.add_argument(
     ),
 )
 
+parser.add_argument(
+    "--save-files",
+    action="store_true",
+    help=(
+        "Use this flag to prevent game files from being deleted from the /tmp directory "
+        "after being downloaded (to speed up future runs)."
+    ),
+)
+
 args = parser.parse_args()
+
+
+assert args.batch_size > 0
 
 
 def get_existing_usernames():
@@ -70,8 +82,8 @@ usernames_to_load = set()
 
 def get_profile(username):
     while True:
-        response = requests.get(f"https://lichess.org/@/{username}")
-        if response.status != 429:
+        response = requests.get(f"https://lichess.org/api/user/{username}")
+        if response.status_code != 429:
             break
         print(f"Lichess API rate limit exceeded.")
         time.sleep(60)
@@ -80,34 +92,36 @@ def get_profile(username):
 
 
 def parse_timestamp(ts):
-    return datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.utcfromtimestamp(ts / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def load_usernames():
+def load_usernames(pbar):
+    global existing_usernames
     global usernames_to_load
 
     with get_db_connection() as connection:
-        for username in load_usernames:
+        for username in usernames_to_load:
             profile = get_profile(username)
+
+            profile["profile"] = profile.get("profile", dict())
+            profile["perfs"] = profile.get("perfs", dict())
+            profile["count"] = profile.get("count", dict())
+            profile["playTime"] = profile.get("playTime", dict())
 
             record = [username]
 
-            record.append(profile["profile"]["firstName"] or None)
-            record.append(profile["profile"]["lastName"] or None)
-            record.append(profile["profile"]["bio"] or None)
-            country = profile["profile"]["country"] or None
-            assert country is None or len(country) == 2, f"Invalid country code: {country}"
-            record.append(country)
+            record.append(profile["profile"].get("firstName") or None)
+            record.append(profile["profile"].get("lastName") or None)
+            record.append(profile["profile"].get("bio") or None)
+            record.append(profile["profile"].get("country") or None)
 
-            record.append(profile["profile"]["fideRating"] or None)
-            record.append(profile["profile"]["uscfRating"] or None)
-            record.append(profile["profile"]["ecfRating"] or None)
-            record.append(profile["title"] or None)
+            record.append(profile["profile"].get("fideRating"))
+            record.append(profile["profile"].get("uscfRating"))
+            record.append(profile["profile"].get("ecfRating"))
+            record.append(profile.get("title"))
 
-            created_at = profile["createdAt"]
-            assert created_at
-            record.append(parse_timestamp(created_at))
-            record.append(parse_timestamp(profile["seenAt"]) if profile["seenAt"] else None)
+            record.append(parse_timestamp(profile["seenAt"]) if profile.get("createdAt") else None)
+            record.append(parse_timestamp(profile["seenAt"]) if profile.get("seenAt") else None)
 
             rating_categories = [
                 "ultraBullet",
@@ -119,46 +133,51 @@ def load_usernames():
             ]
             rating_attributes = ["rating", "rd", "prog", "games"]
             record += [
-                profile["perfs"][category][attribute]
+                profile["perfs"].get(category, dict()).get(attribute)
                 for category in rating_categories
                 for attribute in rating_attributes
             ]
 
-            record.append(profile["count"]["all"])
-            record.append(profile["count"]["rated"])
-            record.append(profile["count"]["win"])
-            record.append(profile["count"]["loss"])
-            record.append(profile["count"]["draw"])
+            record.append(profile["count"].get("all", 0))
+            record.append(profile["count"].get("rated", 0))
+            record.append(profile["count"].get("win", 0))
+            record.append(profile["count"].get("loss", 0))
+            record.append(profile["count"].get("draw", 0))
 
-            record.append(profile["completionRate"])
-            record.append(profile["playTime"]["total"])
-            record.append(profile["playTime"]["tv"])
+            record.append(profile.get("completionRate"))
+            record.append(profile["playTime"].get("total", 0))
+            record.append(profile["playTime"].get("tv", 0))
 
-            record.append(profile["patron"])
-            record.append(profile["verified"])
-            record.append(profile["tosViolation"])
+            record.append(profile.get("patron", False))
+            record.append(profile.get("verified", False))
+            record.append(profile.get("tosViolation", False))
 
             with connection.cursor() as cursor:
-                cursor.execute(upsert_players, record)
+                cursor.execute(upsert_players, tuple(record))
             connection.commit()
+            pbar.update(1)
         existing_usernames |= usernames_to_load
         usernames_to_load.clear()
 
 
-username_re = re.compile(r'^\[?:(White|Black) "(\s+)"\]$')
+username_re = re.compile(r'^\[(?:White|Black) "(.+)"\]$')
 
 for game_file_context in get_games_files(
-    from_date=args.from_date, to_date=args.to_date, ascending=args.ascending
+    from_date=args.from_date,
+    to_date=args.to_date,
+    ascending=args.ascending,
+    save_files=args.save_files,
 ):
     with game_file_context() as game_file:
         print(f"Loading profiles...")
-        for line in tqdm(game_file):
-            match = username_re.match(line)
-            if not match:
-                continue
-            username = match.group(1)
-            if username in existing_usernames:
-                continue
-            usernames_to_load.add(username)
-            if len(usernames_to_load) > args.batch_size:
-                load_usernames()
+        with tqdm() as pbar:
+            for line in game_file:
+                match = username_re.match(line)
+                if not match:
+                    continue
+                username = match.group(1)
+                if username in existing_usernames:
+                    continue
+                usernames_to_load.add(username)
+                if len(usernames_to_load) >= args.batch_size:
+                    load_usernames(pbar)
