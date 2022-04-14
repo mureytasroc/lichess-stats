@@ -1,10 +1,12 @@
-from ..data_helpers.get_games_files import get_games_files
+from app.data_helpers.get_games_files import get_games_files
 import argparse
-from ..database.connect import get_db_connection
-from ..sql.statements import upsert_players
+from app.database.connect import get_db_connection
+from app.sql.statements import upsert_players
 import re
 import requests
 import time
+from datetime import datetime
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
 
@@ -40,7 +42,6 @@ parser.add_argument(
 
 parser.add_argument(
     "--ascending",
-    type=str,
     action="store_true",
     help=(
         "Use this flag to load game files in ascending chronological order "
@@ -74,73 +75,74 @@ def get_profile(username):
             break
         print(f"Lichess API rate limit exceeded.")
         time.sleep(60)
+    assert response.status_code == 200
     return response.json()
 
 
-def lichess_id_to_int(lichess_id):
-    assert len(lichess_id) == 8
-    return sum(ord(c) << (8 * i) for i, c in enumerate(reversed(lichess_id)))
+def parse_timestamp(ts):
+    return datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def load_usernames():
     global usernames_to_load
-    player_tuples = []
-
-    for username in load_usernames:
-        profile = get_profile(username)
-
-        record = [username]
-
-        record.append(profile["profile"]["firstName"] or None)
-        record.append(profile["profile"]["lastName"] or None)
-        record.append(profile["profile"]["bio"] or None)
-        country = profile["profile"]["country"] or None
-        assert country is None or len(country) == 2, f"Invalid country code: {country}"
-        record.append(country)
-
-        record.append(profile["profile"]["fideRating"] or None)
-        record.append(profile["profile"]["uscfRating"] or None)
-        record.append(profile["profile"]["ecfRating"] or None)
-        record.append(profile["title"] or None)
-
-        created_at = profile["createdAt"]
-        assert created_at
-        record.append(created_at)
-        record.append(profile["seenAt"] or None)
-
-        rating_categories = [
-            "ultraBullet",
-            "bullet",
-            "blitz",
-            "rapid",
-            "classical",
-            "correspondence",
-        ]
-        rating_attributes = ["rating", "rd", "prog", "games"]
-        record += [
-            profile["perfs"][category][attribute]
-            for category in rating_categories
-            for attribute in rating_attributes
-        ]
-
-        record.append(profile["count"]["all"])
-        record.append(profile["count"]["rated"])
-        record.append(profile["count"]["win"])
-        record.append(profile["count"]["loss"])
-        record.append(profile["count"]["draw"])
-
-        record.append(profile["completionRate"])
-        record.append(profile["playTime"]["total"])
-        record.append(profile["playTime"]["tv"])
-
-        record.append(profile["patron"])
-        record.append(profile["verified"])
-        record.append(profile["tosViolation"])
 
     with get_db_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(upsert_players, player_tuples)
-        connection.commit()
+        for username in load_usernames:
+            profile = get_profile(username)
+
+            record = [username]
+
+            record.append(profile["profile"]["firstName"] or None)
+            record.append(profile["profile"]["lastName"] or None)
+            record.append(profile["profile"]["bio"] or None)
+            country = profile["profile"]["country"] or None
+            assert country is None or len(country) == 2, f"Invalid country code: {country}"
+            record.append(country)
+
+            record.append(profile["profile"]["fideRating"] or None)
+            record.append(profile["profile"]["uscfRating"] or None)
+            record.append(profile["profile"]["ecfRating"] or None)
+            record.append(profile["title"] or None)
+
+            created_at = profile["createdAt"]
+            assert created_at
+            record.append(parse_timestamp(created_at))
+            record.append(parse_timestamp(profile["seenAt"]) if profile["seenAt"] else None)
+
+            rating_categories = [
+                "ultraBullet",
+                "bullet",
+                "blitz",
+                "rapid",
+                "classical",
+                "correspondence",
+            ]
+            rating_attributes = ["rating", "rd", "prog", "games"]
+            record += [
+                profile["perfs"][category][attribute]
+                for category in rating_categories
+                for attribute in rating_attributes
+            ]
+
+            record.append(profile["count"]["all"])
+            record.append(profile["count"]["rated"])
+            record.append(profile["count"]["win"])
+            record.append(profile["count"]["loss"])
+            record.append(profile["count"]["draw"])
+
+            record.append(profile["completionRate"])
+            record.append(profile["playTime"]["total"])
+            record.append(profile["playTime"]["tv"])
+
+            record.append(profile["patron"])
+            record.append(profile["verified"])
+            record.append(profile["tosViolation"])
+
+            with connection.cursor() as cursor:
+                cursor.execute(upsert_players, record)
+            connection.commit()
+        existing_usernames |= usernames_to_load
+        usernames_to_load.clear()
 
 
 username_re = re.compile(r'^\[?:(White|Black) "(\s+)"\]$')
@@ -149,7 +151,8 @@ for game_file_context in get_games_files(
     from_date=args.from_date, to_date=args.to_date, ascending=args.ascending
 ):
     with game_file_context() as game_file:
-        for line in game_file:
+        print(f"Loading profiles...")
+        for line in tqdm(game_file):
             match = username_re.match(line)
             if not match:
                 continue

@@ -1,15 +1,16 @@
 import requests
 from decimal import *
-from ..config import settings
+from app.config import settings
 import re
 import os
 import shutil
 import contextlib
 import bz2
+from tqdm import tqdm
 
 
 extract_date_re = re.compile(
-    r"^https:\/\/database\.lichess\.org\/standard\/lichess_db_standard_rated_(\s{7})\.pgn\.bz2$"
+    r"^^https:\/\/database\.lichess\.org\/standard\/lichess_db_standard_rated_(\d{4}\-\d{2})\.pgn\.bz2$"
 )
 
 
@@ -21,8 +22,10 @@ def download_game(game_url):
     os.makedirs("/tmp", exist_ok=True)
     filepath = "/tmp/" + game_url.split("/")[-1]
     with requests.get(game_url, stream=True) as r:
+        file_size = int(r.headers.get("Content-Length", 0)) or None
         with open(filepath, "wb") as f:
-            shutil.copyfileobj(r.raw, f)
+            with tqdm.wrapattr(r.raw, "read", total=file_size) as r_raw:
+                shutil.copyfileobj(r_raw, f)
     return filepath
 
 

@@ -9,4 +9,6 @@ title_to_desc = {
     "CM": "Candidate Master (FIDE)",
     "WCM": "Woman Candidate Master (FIDE)",
     "WNM": "Woman National Master",
+    "LM": "Lichess Master",
+    "BOT": "Bot Account",
 }

@@ -2,7 +2,7 @@ def load_sql(file_name: str) -> str:
     """
     Load SQL from a file.
     """
-    with open(file_name + ".sql", "r") as f:
+    with open(f"app/sql/{file_name}.sql", "r") as f:
         return f.read()
 
 

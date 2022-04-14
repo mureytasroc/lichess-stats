@@ -1,4 +1,4 @@
-from ..config import settings
+from app.config import settings
 import pymysql
 
 

@@ -2,7 +2,7 @@ import requests
 from collections import deque
 import pymysql
 from decimal import *
-from ..config import settings
+from app.config import settings
 import argparse
 import gc
 
