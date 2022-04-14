@@ -1,101 +1,125 @@
 CREATE TABLE IF NOT EXISTS Player
   (
-     username               VARCHAR(32) PRIMARY KEY, -- get player url as f"https://lichess.org/@/{username}"
-     first_name             VARCHAR(64),
-     last_name              VARCHAR(64),
-     bio                    VARCHAR(1024),
-     country                CHAR(2),
+     username                  VARCHAR(32) PRIMARY KEY, -- get player url as f"https://lichess.org/@/{username}"
+     profile_updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
      
-     created_at             TIMESTAMP NOT NULL,
-     seen_at                TIMESTAMP,
+     first_name                VARCHAR(64),
+     last_name                 VARCHAR(64),
+     bio                       VARCHAR(1024),
+     country                   CHAR(2),
+
+     fide_rating               SMALLINT UNSIGNED,
+     uscf_rating               SMALLINT UNSIGNED,
+     ecf_rating                SMALLINT UNSIGNED,
+     title                     ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
-     ultrabullet_rating     SMALLINT UNSIGNED, -- glicko2
-     bullet_rating          SMALLINT UNSIGNED, -- glicko2
-     blitz_rating           SMALLINT UNSIGNED, -- glicko2
-     rapid_rating           SMALLINT UNSIGNED, -- glicko2
-     classsical_rating      SMALLINT UNSIGNED, -- glicko2
-     correspondence_rating  SMALLINT UNSIGNED, -- glicko2
+     created_at                TIMESTAMP NOT NULL, -- timestamp of Lichess account creation
+     seen_at                   TIMESTAMP, -- timestamp of last Lichess visit
      
-     fide_rating            SMALLINT UNSIGNED,
-     uscf_rating            SMALLINT UNSIGNED,
-     ecf_rating             SMALLINT UNSIGNED,
-     title                  ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
+     ultrabullet_rating        SMALLINT UNSIGNED, -- glicko2 rating
+     ultrabullet_rd            SMALLINT UNSIGNED, -- glicko2 rating deviation
+     ultrabullet_prog          SMALLINT UNSIGNED, -- recent rating change
+     ultrabullet_num_games     INT UNSIGNED, -- number of games played in this category
+
+     bullet_rating             SMALLINT UNSIGNED, -- glicko2 rating
+     bullet_rd                 SMALLINT UNSIGNED, -- glicko2 rating deviation
+     bulletprog                SMALLINT UNSIGNED, -- recent rating change
+     bullet_num_games          INT UNSIGNED, -- number of games played in this category
+
+     blitz_rating              SMALLINT UNSIGNED, -- glicko2 rating
+     blitz_rd                  SMALLINT UNSIGNED, -- glicko2 rating deviation
+     blitz_prog                SMALLINT UNSIGNED, -- recent rating change
+     blitz_num_games           INT UNSIGNED, -- number of games played in this category
+
+     rapid_rating              SMALLINT UNSIGNED, -- glicko2 rating
+     rapid_rd                  SMALLINT UNSIGNED, -- glicko2 rating deviation
+     rapid_prog                SMALLINT UNSIGNED, -- recent rating change
+     rapid_num_games           INT UNSIGNED, -- number of games played in this category
+
+     classsical_rating         SMALLINT UNSIGNED, -- glicko2 rating
+     classsical_rd             SMALLINT UNSIGNED, -- glicko2 rating deviation
+     classsical_prog           SMALLINT UNSIGNED, -- recent rating change
+     classsical_num_games      INT UNSIGNED, -- number of games played in this category
+
+     correspondence_rating     SMALLINT UNSIGNED, -- glicko2 rating
+     correspondence_rd         SMALLINT UNSIGNED, -- glicko2 rating deviation
+     correspondence_prog       SMALLINT UNSIGNED, -- recent rating change
+     correspondence_num_games  INT UNSIGNED, -- number of games played in this category
      
-     patron                 BOOLEAN,
-     verified               BOOLEAN,
-     tos_violation          BOOLEAN, -- user has violated lichess TOS
+     num_games                 INT UNSIGNED NOT NULL, -- total number of games played
+     num_rated                 INT UNSIGNED NOT NULL, -- total number of rated games played
+     wins                      INT UNSIGNED NOT NULL,
+     losses                    INT UNSIGNED NOT NULL,
+     draws                     INT UNSIGNED NOT NULL,
      
-     num_games              INT UNSIGNED,
-     num_rated              INT UNSIGNED, -- number of rated games
-     wins                   INT UNSIGNED,
-     losses                 INT UNSIGNED,
-     draws                  INT UNSIGNED,
-     
-     completion_rate        TINYINT UNSIGNED, -- 0-100
-     play_time              INT UNSIGNED, -- total seconds played on lichess
-     lichess_tv_time        INT UNSIGNED -- total seconds displayed on lichess tv
+     completion_rate           TINYINT UNSIGNED, -- 0-100
+     play_time                 INT UNSIGNED NOT NULL, -- total seconds played on lichess
+     lichess_tv_time           INT UNSIGNED NOT NULL, -- total seconds displayed on lichess tv
+
+     patron                    BOOLEAN NOT NULL,
+     verified                  BOOLEAN NOT NULL,
+     tos_violation             BOOLEAN NOT NULL -- user has violated lichess TOS
   );
 
 
 CREATE TABLE IF NOT EXISTS Game
   (
-     id                     BIGINT UNSIGNED PRIMARY KEY, -- lichess_id converted to int for performance
-     lichess_id             CHAR(8), -- get game url as f"https://lichess.org/{lichess_id}"
-     start_timestamp        TIMESTAMP NOT NULL,
+     lichess_id                CHAR(8) PRIMARY KEY, -- get game url as f"https://lichess.org/{lichess_id}"
+     start_timestamp           TIMESTAMP NOT NULL,
      
-     tournament_id          CHAR(8), -- if not null, get tournament url as f"https://lichess.org/tournament/{tournament_id}"
-     category               ENUM('UltraBullet', 'Bullet', 'Blitz', 'Rapid', 'Classical', 'Correspondence') NOT NULL,
-     time_control_base      TINYINT UNSIGNED, -- base time in minutes
-     time_control_increment TINYINT UNSIGNED, -- increment in seconds
+     tournament_id             CHAR(8), -- if not null, get tournament url as f"https://lichess.org/tournament/{tournament_id}"
+     category                  ENUM('UltraBullet', 'Bullet', 'Blitz', 'Rapid', 'Classical', 'Correspondence') NOT NULL,
+     time_control_base         SMALLINT UNSIGNED, -- base time in seconds
+     time_control_increment    TINYINT UNSIGNED, -- increment in seconds
      
-     white_username         VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
-     white_elo              SMALLINT UNSIGNED NOT NULL, -- glicko2
-     white_title            ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
+     white_username            VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
+     white_elo                 SMALLINT UNSIGNED NOT NULL, -- glicko2
+     white_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
-     black_username         VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
-     black_elo              SMALLINT UNSIGNED NOT NULL, -- glicko2
-     black_title            ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
+     black_username            VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
+     black_elo                 SMALLINT UNSIGNED NOT NULL, -- glicko2
+     black_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
-     opening_name           VARCHAR(256) NOT NULL,
-     opening_ec0            CHAR(3) NOT NULL, -- less specific than opening_name
+     opening_name              VARCHAR(256) NOT NULL,
+     opening_ec0               CHAR(3) NOT NULL, -- less specific than opening_name
      
-     result                 ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
-     termination            ENUM('Checkmate', 'Resignation', 'Time forfeit', 'Abandoned', 'Rules infraction') NOT NULL,
-     white_rating_diff      SMALLINT, -- white's rating change from game
-     black_rating_diff      SMALLINT -- ^
+     result                    ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
+     termination               ENUM('Checkmate', 'Resignation', 'Time forfeit', 'Abandoned', 'Rules infraction') NOT NULL,
+     white_rating_diff         SMALLINT, -- white's rating change from game
+     black_rating_diff         SMALLINT -- ^
   );
 
 
 CREATE TABLE IF NOT EXISTS Moves
   (
-     game_id                BIGINT UNSIGNED,
-     ply                    SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
-     move_notation          VARCHAR(16) NOT NULL,
+     game_id                   CHAR(8),
+     ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
+     move_notation             VARCHAR(16) NOT NULL,
      
      PRIMARY KEY(game_id, ply),
-     FOREIGN KEY (game_id) REFERENCES Game(id)
+     FOREIGN KEY (game_id) REFERENCES Game(lichess_id)
   );
 
 
 CREATE TABLE IF NOT EXISTS Evaluation
   (
-     game_id                BIGINT UNSIGNED,
-     ply                    SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
-     eval                   DECIMAL(5, 2), -- null if missing or forced mate found
-     mate_in                TINYINT, -- negative for black, positive for white, null if no forced mate found
+     game_id                   CHAR(8),
+     ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
+     eval                      DECIMAL(5, 2), -- null if missing or forced mate found
+     mate_in                   TINYINT, -- negative for black, positive for white, null if no forced mate found
      
      PRIMARY KEY(game_id, ply),
-     FOREIGN KEY (game_id) REFERENCES Game(id)
+     FOREIGN KEY (game_id) REFERENCES Game(lichess_id)
   );
 
 
 CREATE TABLE IF NOT EXISTS TimeRemaining
   (
-     game_id                BIGINT UNSIGNED,
-     move_num               SMALLINT UNSIGNED NOT NULL, -- move number
-     white_hundredths       INT UNSIGNED, -- hundredths of a second; null if missing or forced mate found
-     black_hundredths       INT UNSIGNED, -- ^
+     game_id                   CHAR(8),
+     move_num                  SMALLINT UNSIGNED NOT NULL, -- 1-indexed move number
+     white_hundredths          INT UNSIGNED, -- hundredths of a second; null if missing or forced mate found
+     black_hundredths          INT UNSIGNED, -- ^
      
      PRIMARY KEY(game_id, move_num),
-     FOREIGN KEY (game_id) REFERENCES Game(id)
+     FOREIGN KEY (game_id) REFERENCES Game(lichess_id)
   );

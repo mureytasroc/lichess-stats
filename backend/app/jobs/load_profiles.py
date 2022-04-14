@@ -3,6 +3,8 @@ import argparse
 from ..database.connect import get_db_connection
 from ..sql.statements import upsert_players
 import re
+import requests
+import time
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
 
@@ -10,7 +12,10 @@ parser.add_argument(
     "--batch-size",
     type=int,
     default=100,
-    help=("The number of users to load at once, in a single transaction."),
+    help=(
+        "The number of usernames to load at once from game files. "
+        "Regardless, profiles are always individually committed."
+    ),
 )
 
 parser.add_argument(
@@ -62,12 +67,75 @@ existing_usernames = get_existing_usernames()
 usernames_to_load = set()
 
 
+def get_profile(username):
+    while True:
+        response = requests.get(f"https://lichess.org/@/{username}")
+        if response.status != 429:
+            break
+        print(f"Lichess API rate limit exceeded.")
+        time.sleep(60)
+    return response.json()
+
+
+def lichess_id_to_int(lichess_id):
+    assert len(lichess_id) == 8
+    return sum(ord(c) << (8 * i) for i, c in enumerate(reversed(lichess_id)))
+
+
 def load_usernames():
     global usernames_to_load
     player_tuples = []
 
     for username in load_usernames:
-        pass
+        profile = get_profile(username)
+
+        record = [username]
+
+        record.append(profile["profile"]["firstName"] or None)
+        record.append(profile["profile"]["lastName"] or None)
+        record.append(profile["profile"]["bio"] or None)
+        country = profile["profile"]["country"] or None
+        assert country is None or len(country) == 2, f"Invalid country code: {country}"
+        record.append(country)
+
+        record.append(profile["profile"]["fideRating"] or None)
+        record.append(profile["profile"]["uscfRating"] or None)
+        record.append(profile["profile"]["ecfRating"] or None)
+        record.append(profile["title"] or None)
+
+        created_at = profile["createdAt"]
+        assert created_at
+        record.append(created_at)
+        record.append(profile["seenAt"] or None)
+
+        rating_categories = [
+            "ultraBullet",
+            "bullet",
+            "blitz",
+            "rapid",
+            "classical",
+            "correspondence",
+        ]
+        rating_attributes = ["rating", "rd", "prog", "games"]
+        record += [
+            profile["perfs"][category][attribute]
+            for category in rating_categories
+            for attribute in rating_attributes
+        ]
+
+        record.append(profile["count"]["all"])
+        record.append(profile["count"]["rated"])
+        record.append(profile["count"]["win"])
+        record.append(profile["count"]["loss"])
+        record.append(profile["count"]["draw"])
+
+        record.append(profile["completionRate"])
+        record.append(profile["playTime"]["total"])
+        record.append(profile["playTime"]["tv"])
+
+        record.append(profile["patron"])
+        record.append(profile["verified"])
+        record.append(profile["tosViolation"])
 
     with get_db_connection() as connection:
         with connection.cursor() as cursor:
