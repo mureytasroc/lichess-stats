@@ -1,5 +1,6 @@
-from app.config import settings
 import pymysql
+
+from app.config import settings
 
 
 def get_db_connection():

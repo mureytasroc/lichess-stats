@@ -1,12 +1,15 @@
-from app.data_helpers.get_games_files import get_games_files
 import argparse
-from app.database.connect import get_db_connection
-from app.sql.statements import upsert_players
 import re
-import requests
 import time
 from datetime import datetime
+
+import requests
 from tqdm import tqdm
+
+from app.database.connect import get_db_connection
+from app.load_data_helpers.get_games_files import get_games_files
+from app.sql.statements import upsert_players
+
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
 
@@ -85,7 +88,7 @@ def get_profile(username):
         response = requests.get(f"https://lichess.org/api/user/{username}")
         if response.status_code != 429:
             break
-        print(f"Lichess API rate limit exceeded.")
+        print("Lichess API rate limit exceeded.")
         time.sleep(60)
     return response.json(), response.status_code
 
@@ -172,7 +175,7 @@ for game_file_context in get_games_files(
     save_files=args.save_files,
 ):
     with game_file_context() as game_file:
-        print(f"Loading profiles...")
+        print("Loading profiles...")
         with tqdm() as pbar:
             for line in game_file:
                 match = username_re.match(line)

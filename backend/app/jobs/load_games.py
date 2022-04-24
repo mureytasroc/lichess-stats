@@ -1,10 +1,12 @@
-import requests
-from collections import deque
-import pymysql
-from decimal import *
-from app.config import settings
 import argparse
 import gc
+from collections import deque
+from decimal import *
+
+import pymysql
+import requests
+
+from app.config import settings
 
 
 parser = argparse.ArgumentParser(description="Process some integers.")

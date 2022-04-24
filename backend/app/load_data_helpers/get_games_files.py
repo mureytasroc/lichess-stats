@@ -1,16 +1,17 @@
-import requests
-from decimal import *
-from app.config import settings
-import re
-import os
-import shutil
-import contextlib
 import bz2
+import contextlib
+import os
+import re
+import shutil
+
+import requests
 from tqdm import tqdm
+
+from app.config import settings
 
 
 extract_date_re = re.compile(
-    r"^^https:\/\/database\.lichess\.org\/standard\/lichess_db_standard_rated_(\d{4}\-\d{2})\.pgn\.bz2$"
+    r"^^https:\/\/database\.lichess\.org\/standard\/lichess_db_standard_rated_(\d{4}\-\d{2})\.pgn\.bz2$"  # noqa: E501
 )
 
 
