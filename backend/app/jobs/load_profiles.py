@@ -87,8 +87,7 @@ def get_profile(username):
             break
         print(f"Lichess API rate limit exceeded.")
         time.sleep(60)
-    assert response.status_code == 200
-    return response.json()
+    return response.json(), response.status_code
 
 
 def parse_timestamp(ts):
@@ -101,7 +100,11 @@ def load_usernames(pbar):
 
     with get_db_connection() as connection:
         for username in usernames_to_load:
-            profile = get_profile(username)
+            profile, response_code = get_profile(username)
+
+            if response_code != 200:
+                print(f"Error loading profile for {username}: {response_code}")
+                continue
 
             profile["profile"] = profile.get("profile", dict())
             profile["perfs"] = profile.get("perfs", dict())
