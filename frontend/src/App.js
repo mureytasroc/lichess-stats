@@ -1,23 +1,47 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import { doApiRequest } from "./utils/fetch";
+import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 function App() {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest("/profile/title/distribution");
+      setData(result.titles);
+    })();
+  }, []);
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+      <h1>Chess Wins</h1>
+      <ResponsiveContainer width="80%" height={600}>
+        <BarChart
+          width={500}
+          height={300}
+          data={data}
+          margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
         >
-          Learn React
-        </a>
-      </header>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="title" />
+          <YAxis scale="log" domain={[0.8, "auto"]} />
+          <Bar dataKey="count" fill="#8884d8" />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
