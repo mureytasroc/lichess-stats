@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from "react";
-import "./App.css";
-import { doApiRequest } from "./utils/fetch";
 import {
   BarChart,
   Bar,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
+import "./App.css";
+import { doApiRequest } from "./utils/fetch";
 
 function App() {
   const [data, setData] = useState([]);

@@ -3,10 +3,14 @@
         "browser": true,
         "es2021": true
     },
+    "plugins": [
+        "react",
+        "prettier"
 
+    ],
     "extends": [
-        "prettier",
-        "airbnb"
+        "airbnb",
+        "prettier"
     ],
     "parserOptions": {
         "ecmaFeatures": {
@@ -15,18 +19,14 @@
         "ecmaVersion": "latest",
         "sourceType": "module"
     },
-    "plugins": [
-        "react"
-    ],
     "rules": {
+        "prettier/prettier": "error",
         "react/jsx-filename-extension": 0,
-        "quotes": ["error", "double", "avoid-escape"],
         "no-unused-vars": [
             "error",
             {
               "args": "none"
             }
-          ],
-        "comma-dangle": ["error", {"functions": "ignore"}]
+          ]
     }
 }
