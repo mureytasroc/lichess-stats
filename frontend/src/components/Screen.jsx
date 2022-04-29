@@ -1,4 +1,5 @@
 import React from "react";
+import styles from "./Screen.module.css";
 
 const COLORS = {
   YELLOW: "#FFBE0B",
@@ -6,31 +7,22 @@ const COLORS = {
   PINK: "#FF006E",
   PURPLE: "#8338EC",
   BLUE: "#3A86FF",
+  WHITE: "#dde1e7",
 };
 
-function Screen({ id, title, theme, children }) {
+function Screen({ id, title, theme, randomColor, children, floating }) {
+  let keys = Object.keys(COLORS);
+  const color = COLORS[keys[(keys.length * Math.random()) << 0]];
+
   return (
     <div
       id={id}
-      style={{
-        scrollSnapAlign: "start",
-        width: "100vw",
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: theme,
-      }}
+      className={styles.Container}
+      style={{ backgroundColor: randomColor ? color : theme }}
     >
-      <div
-        style={{
-          width: "80%",
-        }}
-      >
-        <h1 style={{ color: "#FFFFFF", textShadow: "1px 2px 0px black" }}>
-          {title}
-        </h1>
-        {children}
+      <div className={styles.InnerContainer}>
+        <h1 className={styles.Title}>{title}</h1>
+        <div className={floating ? styles.floating : ""}>{children}</div>
       </div>
     </div>
   );

@@ -1,0 +1,32 @@
+.Container {
+  scroll-snap-align: start;
+
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.InnerContainer {
+  width: 80%;
+}
+
+.Title {
+  color: #ffffff;
+  text-shadow: 1px 2px 0px #555555;
+}
+
+.floating {
+  background: linear-gradient(135deg, #ffffff, #f5f5f5);
+  /* background: white; */
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
+    6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
+    12.5px 12.5px 10px rgba(0, 0, 0, 0.035),
+    22.3px 22.3px 17.9px rgba(0, 0, 0, 0.042),
+    41.8px 41.8px 33.4px rgba(0, 0, 0, 0.05),
+    100px 100px 80px rgba(0, 0, 0, 0.07);
+  /* box-shadow: -5px -5px 9px rgba(255, 255, 255, 0.45),
+    5px 5px 9px rgba(94, 104, 121, 0.3); */
+}

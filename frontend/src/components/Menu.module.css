@@ -1,0 +1,10 @@
+.Menu {
+  padding: 1rem;
+  position: relative;
+  background: #282828;
+  color: white;
+  height: 100%;
+  text-align: left;
+  max-width: 300px;
+  transition: all 0.2s ease-in-out;
+}
