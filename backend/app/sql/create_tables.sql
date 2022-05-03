@@ -18,32 +18,32 @@ CREATE TABLE IF NOT EXISTS Player
      
      ultrabullet_rating        SMALLINT UNSIGNED, -- glicko2 rating
      ultrabullet_rd            SMALLINT UNSIGNED, -- glicko2 rating deviation
-     ultrabullet_prog          SMALLINT UNSIGNED, -- recent rating change
+     ultrabullet_prog          SMALLINT, -- recent rating change
      ultrabullet_num_games     INT UNSIGNED, -- number of games played in this category
 
      bullet_rating             SMALLINT UNSIGNED, -- glicko2 rating
      bullet_rd                 SMALLINT UNSIGNED, -- glicko2 rating deviation
-     bulletprog                SMALLINT UNSIGNED, -- recent rating change
+     bullet_prog               SMALLINT, -- recent rating change
      bullet_num_games          INT UNSIGNED, -- number of games played in this category
 
      blitz_rating              SMALLINT UNSIGNED, -- glicko2 rating
      blitz_rd                  SMALLINT UNSIGNED, -- glicko2 rating deviation
-     blitz_prog                SMALLINT UNSIGNED, -- recent rating change
+     blitz_prog                SMALLINT, -- recent rating change
      blitz_num_games           INT UNSIGNED, -- number of games played in this category
 
      rapid_rating              SMALLINT UNSIGNED, -- glicko2 rating
      rapid_rd                  SMALLINT UNSIGNED, -- glicko2 rating deviation
-     rapid_prog                SMALLINT UNSIGNED, -- recent rating change
+     rapid_prog                SMALLINT, -- recent rating change
      rapid_num_games           INT UNSIGNED, -- number of games played in this category
 
      classsical_rating         SMALLINT UNSIGNED, -- glicko2 rating
      classsical_rd             SMALLINT UNSIGNED, -- glicko2 rating deviation
-     classsical_prog           SMALLINT UNSIGNED, -- recent rating change
+     classsical_prog           SMALLINT, -- recent rating change
      classsical_num_games      INT UNSIGNED, -- number of games played in this category
 
      correspondence_rating     SMALLINT UNSIGNED, -- glicko2 rating
      correspondence_rd         SMALLINT UNSIGNED, -- glicko2 rating deviation
-     correspondence_prog       SMALLINT UNSIGNED, -- recent rating change
+     correspondence_prog       SMALLINT, -- recent rating change
      correspondence_num_games  INT UNSIGNED, -- number of games played in this category
      
      num_games                 INT UNSIGNED NOT NULL, -- total number of games played
@@ -72,11 +72,11 @@ CREATE TABLE IF NOT EXISTS Game
      time_control_base         SMALLINT UNSIGNED, -- base time in seconds
      time_control_increment    TINYINT UNSIGNED, -- increment in seconds
      
-     white_username            VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
+     white_username            VARCHAR(32) NOT NULL, -- references Player(username) and indexed, but not FOREIGN KEY (profile may not be loaded)
      white_elo                 SMALLINT UNSIGNED NOT NULL, -- glicko2
      white_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
-     black_username            VARCHAR(32), -- NOT NULL FOREIGN KEY REFERENCES Player(username)
+     black_username            VARCHAR(32) NOT NULL, -- references Player(username) and indexed, but not FOREIGN KEY (profile may not be loaded)
      black_elo                 SMALLINT UNSIGNED NOT NULL, -- glicko2
      black_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS Game
      white_rating_diff         SMALLINT, -- white's rating change from game
      black_rating_diff         SMALLINT -- ^
   );
+
+CREATE INDEX game_white_username_idx ON Game(white_username);
+CREATE INDEX game_black_username_idx ON Game(black_username);
 
 
 CREATE TABLE IF NOT EXISTS Moves
