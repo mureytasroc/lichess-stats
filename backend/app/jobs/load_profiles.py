@@ -238,19 +238,6 @@ async def load_profiles():
             username_queue = asyncio.Queue(maxsize=args.queue_limit)
             profile_queue = asyncio.Queue(maxsize=args.queue_limit)
             with tqdm() as pbar:
-
-                async def pbar_description():
-                    while True:
-                        await asyncio.sleep(1)
-                        pbar.set_description(
-                            f"Loading profiles...\n"
-                            f"username queue size: {username_queue.qsize()}\n"
-                            f"profile queue size: {profile_queue.qsize()}\n"
-                            f"profiles loaded"
-                        )
-
-                pbar_description_task = asyncio.create_task(pbar_description())
-
                 username_producer_task = asyncio.create_task(
                     username_producer(game_file, username_queue)
                 )
@@ -267,8 +254,6 @@ async def load_profiles():
                     profile_producer_task,
                     *profile_consumer_tasks,
                 )
-                pbar_description_task.cancel()
-                await pbar_description_task
                 await username_queue.join()
                 await profile_queue.join()
 
