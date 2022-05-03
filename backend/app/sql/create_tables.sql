@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS Player
      first_name                VARCHAR(64),
      last_name                 VARCHAR(64),
      bio                       VARCHAR(1024),
-     country                   VARCHAR(8),
+     country                   VARCHAR(64),
 
      fide_rating               SMALLINT UNSIGNED,
      uscf_rating               SMALLINT UNSIGNED,
