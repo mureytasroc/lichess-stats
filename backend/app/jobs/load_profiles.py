@@ -15,32 +15,6 @@ from app.sql.statements import upsert_players
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
 
 parser.add_argument(
-    "--num-profile-producers",
-    "-p",
-    type=int,
-    default=1,
-    help=("The number of profile producer tasks (loading profiles from the Lichess API)."),
-)
-
-parser.add_argument(
-    "--num-profile-consumers",
-    "-c",
-    type=int,
-    default=1,
-    help=("The number of profile consumer tasks (committing profiles to the db)."),
-)
-
-parser.add_argument(
-    "--queue-limit",
-    "-q",
-    type=int,
-    default=100,
-    help=(
-        "The max size of the username and profile queues (used for concurrent processing/loading)."
-    ),
-)
-
-parser.add_argument(
     "--num-workers",
     "-w",
     type=int,
@@ -54,6 +28,24 @@ parser.add_argument(
     type=int,
     default=0,
     help=("The number of this machine's worker, in the range [0..worker_num)."),
+)
+
+parser.add_argument(
+    "--queue-limit",
+    "-q",
+    type=int,
+    default=100,
+    help=(
+        "The max size of the username and profile queues (used for concurrent processing/loading)."
+    ),
+)
+
+parser.add_argument(
+    "--num-profile-consumers",
+    "-c",
+    type=int,
+    default=1,
+    help=("The number of profile consumer tasks (committing profiles to the db)."),
 )
 
 parser.add_argument(
@@ -101,7 +93,6 @@ args = parser.parse_args()
 assert args.queue_limit > 0
 assert args.num_workers > 0
 assert 0 <= args.worker_num < args.num_workers
-assert args.num_profile_producers > 0
 assert args.num_profile_consumers > 0
 
 
@@ -250,10 +241,9 @@ async def load_profiles():
                 username_producer_task = asyncio.create_task(
                     username_producer(game_file, username_queue)
                 )
-                profile_producer_tasks = [
-                    asyncio.create_task(profile_producer(username_queue, profile_queue))
-                    for _ in range(args.num_profile_producers)
-                ]
+                profile_producer_task = asyncio.create_task(
+                    profile_producer(username_queue, profile_queue)
+                )
                 profile_consumer_tasks = [
                     asyncio.create_task(profile_consumer(profile_queue, pbar))
                     for _ in range(args.num_profile_consumers)
@@ -261,7 +251,7 @@ async def load_profiles():
 
                 await asyncio.gather(
                     username_producer_task,
-                    *profile_producer_tasks,
+                    profile_producer_task,
                     *profile_consumer_tasks,
                 )
                 await username_queue.join()
