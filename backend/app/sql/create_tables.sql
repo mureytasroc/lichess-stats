@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS Game
      opening_ec0               CHAR(3) NOT NULL, -- less specific than opening_name
      
      result                    ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
-     termination               ENUM('Normal', 'Resignation', 'Time forfeit', 'Abandoned', 'Rules infraction') NOT NULL,
+     termination               VARCHAR(32) NOT NULL,
      white_rating_diff         SMALLINT, -- white's rating change from game
      black_rating_diff         SMALLINT -- ^
   );
