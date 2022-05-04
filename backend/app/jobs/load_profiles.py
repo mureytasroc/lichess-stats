@@ -146,6 +146,9 @@ async def get_profile(session, username):
         except aiohttp.client_exceptions.ContentTypeError:
             print(f"Content-Type error for {username}.")
             return None, None
+        except asyncio.TimeoutError:
+            print(f"Timeout error for {username}.")
+            return None, None
 
 
 def parse_timestamp(ts):
