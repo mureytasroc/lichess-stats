@@ -3,6 +3,7 @@ import contextlib
 import os
 import re
 import shutil
+import time
 
 import requests
 from tqdm import tqdm
@@ -22,13 +23,22 @@ def download_game(game_url):
     """
     os.makedirs("/tmp", exist_ok=True)
     filepath = "/tmp/" + game_url.split("/")[-1]
+    downloading_filepath = filepath + ".downloading"
+    if os.path.exists(filepath):
+        return filepath, True
+    if os.path.exists(downloading_filepath) and not os.path.exists(filepath):
+        print("Waiting for download to finish (from other script)...")
+        while os.path.exists(downloading_filepath) and not os.path.exists(filepath):
+            time.sleep(1)
+        print("Download finished.")
     if os.path.exists(filepath):
         return filepath, True
     with requests.get(game_url, stream=True) as r:
         file_size = int(r.headers.get("Content-Length", 0)) or None
-        with open(filepath, "wb") as f:
+        with open(downloading_filepath, "wb") as f:
             with tqdm.wrapattr(r.raw, "read", total=file_size) as r_raw:
                 shutil.copyfileobj(r_raw, f)
+    os.rename(downloading_filepath, filepath)
     return filepath, False
 
 

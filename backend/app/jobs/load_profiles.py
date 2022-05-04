@@ -109,7 +109,6 @@ def get_existing_usernames():
 
 
 existing_usernames = get_existing_usernames()
-usernames_to_load = set()
 
 
 username_re = re.compile(r'^\[(?:White|Black) "(.+)"\]$')
@@ -127,18 +126,26 @@ async def username_producer(game_file, username_queue):
         if i % args.num_workers != args.worker_num:
             continue
         await username_queue.put(username)
-    await username_queue.put(username)
+    await username_queue.put(None)
 
 
 async def get_profile(session, username):
     while True:
-        async with session.get(f"https://lichess.org/api/user/{username}") as response:
-            response_json = await response.json()
-            if response.status == 429:
-                print("Lichess API rate limit exceeded.")
-                await asyncio.sleep(60)
-                continue
-            return response_json, response.status
+        try:
+            async with session.get(f"https://lichess.org/api/user/{username}") as response:
+                response_json = await response.json()
+                response_code = response.status
+                if response_code == 429:
+                    print("Lichess API rate limit exceeded.")
+                    await asyncio.sleep(60)
+                    continue
+                if response_code != 200:
+                    print(f"Error loading profile for {username}: {response_code}.")
+                    return None, None
+                return response_json, response_code
+        except aiohttp.client_exceptions.ContentTypeError:
+            print(f"Content-Type error for {username}.")
+            return None, None
 
 
 def parse_timestamp(ts):
@@ -152,10 +159,9 @@ async def profile_producer(username_queue, profile_queue):
             if username is None:
                 await profile_queue.put(None)
                 break
-            profile, response_code = await get_profile(session, username)
 
-            if response_code != 200:
-                print(f"Error loading profile for {username}: {response_code}")
+            profile, response_code = await get_profile(session, username)
+            if response_code is None:
                 continue
 
             profile["profile"] = profile.get("profile", dict())

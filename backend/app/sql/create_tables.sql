@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS Evaluation
      game_id                   CHAR(8),
      ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
      eval                      DECIMAL(5, 2), -- null if missing or forced mate found
-     mate_in                   TINYINT, -- negative for black, positive for white, null if no forced mate found
+     mate_in                   TINYINT, -- number of PLIES to mate; negative for black, positive for white, null if no forced mate found
+     depth                     SMALLINT UNSIGNED, -- engine depth, if specified
      
      PRIMARY KEY(game_id, ply),
      FOREIGN KEY (game_id) REFERENCES Game(lichess_id)

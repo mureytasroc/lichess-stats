@@ -51,3 +51,12 @@ title_to_desc = {
     "LM": "Lichess Master",
     "BOT": "Bot Account",
 }
+
+categories = {
+    "Bullet",
+    "Blitz",
+    "Rapid",
+    "Classical",
+    "Correspondence",
+    "UltraBullet",
+}
