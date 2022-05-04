@@ -162,6 +162,9 @@ async def game_producer(game_file, game_queue):
         opening_ec0 = headers["ECO"]
 
         result = headers["Result"]
+        if result not in {"1-0", "0-1", "1/2-1/2"}:
+            print(f"Unexpected result: '{result}'. Skipping game.")
+            continue
         termination = headers["Termination"]
 
         game_tup = (
