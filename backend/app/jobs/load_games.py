@@ -70,11 +70,29 @@ parser.add_argument(
     ),
 )
 
+parser.add_argument(
+    "--num-workers",
+    "-w",
+    type=int,
+    default=1,
+    help=("The number of workers (on different computers) to use."),
+)
+
+parser.add_argument(
+    "--worker-num",
+    "-n",
+    type=int,
+    default=0,
+    help=("The number of this machine's worker, in the range [0..worker_num)."),
+)
+
 args = parser.parse_args()
 
 
 assert args.queue_limit > 0
 assert args.num_consumers > 0
+assert args.num_workers > 0
+assert 0 <= args.worker_num < args.num_workers
 
 
 def get_existing_game_ids():
@@ -96,7 +114,9 @@ tournament_id_re = re.compile(r"tournament/(.*)\"")
 
 
 async def game_producer(game_file, game_queue):
+    i = -1
     while True:
+        i += 1
         game = chess.pgn.read_game(game_file)
         if not game:
             break
@@ -104,6 +124,10 @@ async def game_producer(game_file, game_queue):
 
         lichess_id = id_re.search(headers["Site"]).group(1)
         if lichess_id in existing_game_ids:
+            continue
+
+        existing_game_ids.add(lichess_id)
+        if i % args.num_workers != args.worker_num:
             continue
 
         tournament_id_match = tournament_id_re.search(headers["Event"])
@@ -199,7 +223,6 @@ async def game_producer(game_file, game_queue):
                 )
             )
 
-        existing_game_ids.add(lichess_id)
         await game_queue.put((game_tup, moves, time_remaining, evaluation))
     await game_queue.put((None,) * 4)
 

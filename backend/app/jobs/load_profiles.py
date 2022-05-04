@@ -15,22 +15,6 @@ from app.sql.statements import upsert_players
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
 
 parser.add_argument(
-    "--num-workers",
-    "-w",
-    type=int,
-    default=1,
-    help=("The number of workers (on different computers) to use."),
-)
-
-parser.add_argument(
-    "--worker-num",
-    "-n",
-    type=int,
-    default=0,
-    help=("The number of this machine's worker, in the range [0..worker_num)."),
-)
-
-parser.add_argument(
     "--queue-limit",
     "-q",
     type=int,
@@ -87,13 +71,29 @@ parser.add_argument(
     ),
 )
 
+parser.add_argument(
+    "--num-workers",
+    "-w",
+    type=int,
+    default=1,
+    help=("The number of workers (on different computers) to use."),
+)
+
+parser.add_argument(
+    "--worker-num",
+    "-n",
+    type=int,
+    default=0,
+    help=("The number of this machine's worker, in the range [0..worker_num)."),
+)
+
 args = parser.parse_args()
 
 
 assert args.queue_limit > 0
+assert args.num_profile_consumers > 0
 assert args.num_workers > 0
 assert 0 <= args.worker_num < args.num_workers
-assert args.num_profile_consumers > 0
 
 
 def get_existing_usernames():
