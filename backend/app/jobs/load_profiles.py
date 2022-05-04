@@ -136,18 +136,18 @@ async def get_profile(session, username):
                 response_json = await response.json()
                 response_code = response.status
                 if response_code == 429:
-                    print("Lichess API rate limit exceeded.")
+                    tqdm.write("Lichess API rate limit exceeded.")
                     await asyncio.sleep(60)
                     continue
                 if response_code != 200:
-                    print(f"Error loading profile for {username}: {response_code}.")
+                    tqdm.write(f"Error loading profile for {username}: {response_code}.")
                     return None, None
                 return response_json, response_code
         except aiohttp.client_exceptions.ContentTypeError:
-            print(f"Content-Type error for {username}.")
+            tqdm.write(f"Content-Type error for {username}.")
             return None, None
         except asyncio.TimeoutError:
-            print(f"Timeout error for {username}.")
+            tqdm.write(f"Timeout error for {username}.")
             return None, None
 
 
