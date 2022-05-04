@@ -144,8 +144,8 @@ async def get_profile(session, username):
                     return None, None
                 return response_json, response_code
         except aiohttp.client_exceptions.ServerDisconnectedError:
-            tqdm.write(f"Server disconnected for {username}, retrying...")
-            continue
+            tqdm.write(f"Server disconnected for {username}.")
+            return None, None
         except aiohttp.client_exceptions.ContentTypeError:
             tqdm.write(f"Content-Type error for {username}.")
             return None, None
