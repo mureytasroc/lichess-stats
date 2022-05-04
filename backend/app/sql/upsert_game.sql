@@ -1,4 +1,4 @@
-REPLACE INTO Game (
+INSERT IGNORE INTO Game (
      lichess_id,
      start_timestamp,
      

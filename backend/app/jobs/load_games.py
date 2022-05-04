@@ -162,6 +162,8 @@ async def game_producer(game_file, game_queue):
         opening_ec0 = headers["ECO"]
 
         result = headers["Result"]
+        if result == "*":
+            continue
         if result not in {"1-0", "0-1", "1/2-1/2"}:
             tqdm.write(f"Unexpected result: '{result}'. Skipping game.")
             continue
