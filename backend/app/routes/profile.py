@@ -149,6 +149,7 @@ async def game_length_by_title(
     "/country/distribution",
     description="Get the distribution of players by country.",  # noqa: E501
     response_model=CountryDistribution,
+    
 )
 async def country_distribution():
     # TODO
