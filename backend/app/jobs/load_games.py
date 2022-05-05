@@ -203,7 +203,9 @@ async def game_producer(game_file, game_queue):
                 lichess_id,
                 move.ply() // 2,
                 round(move.clock() * 100),
-                move.next() and round(move.next().clock() * 100),
+                move.next()
+                and move.next().clock() is not None
+                and round(move.next().clock() * 100),
             )
             for move in move_nodes[::2]
             if move.clock() is not None
