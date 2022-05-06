@@ -1,6 +1,8 @@
 from typing import Optional
 
 from fastapi import APIRouter, Query
+import pymysql
+
 
 from app.database.util import GameType
 from app.models.profile import (
@@ -19,6 +21,14 @@ from app.models.profile import (
 
 router = APIRouter()
 
+mydb = pymysql.connect(
+    host="chess-db.ccwnen4yavww.us-east-1.rds.amazonaws.com",
+    user="admin",
+    password="aaaaaaaa",
+    port=3306,
+    db="chesswins",
+)
+
 # Titles
 
 
@@ -29,17 +39,21 @@ router = APIRouter()
 )
 async def title_distribution():
     # TODO
+    print("SHOULD FETCH")
+    q = """
+    SELECT title, COUNT(*) as count
+    FROM Player
+    GROUP BY title
+    """
+    with mydb.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute(q, [])
+        result = cur.fetchall()
     return {
-        "titles": [
-            {
-                "title": "GM",
-                "count": 100,
-            }
-        ]
+        "titles": result
     }
 
 
-@router.get(
+@ router.get(
     "/title/completion-rate",
     description="Get statistics on game completion rate by title.",  # noqa: E501
     response_model=CompletionRateByTitle,
