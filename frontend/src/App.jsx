@@ -1,22 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import Screen, { COLORS } from "./components/Screen";
 import Menu from "./components/Menu";
 import Splash from "./components/Splash";
-import { TitleDistribution } from "./components/Charts";
+import { TitleDistributionTitle, TitleDistribution } from "./components/Charts";
 
 function App() {
   const content = [
-    TitleDistribution(),
-    TitleDistribution(),
-    TitleDistribution(),
-    TitleDistribution(),
+    { title: TitleDistributionTitle, content: <TitleDistribution /> },
+    { title: TitleDistributionTitle, content: <TitleDistribution /> },
+    { title: TitleDistributionTitle, content: <TitleDistribution /> },
+    { title: TitleDistributionTitle, content: <TitleDistribution /> },
   ];
-  console.log(content);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const currScroll = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const currScreen = Math.floor(window.scrollY / window.innerHeight);
+      if (currScreen > currScroll.current) {
+        setScrollPosition(currScreen);
+        currScroll.current = Math.floor(currScreen);
+      }
+    };
+    // clean up code
+    window.removeEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   return (
     <div className="App">
       <Menu content={content} />
-      <Screen theme={COLORS.BLUE} id="Title Page" title="Chess Wins Net">
+      <Screen theme={COLORS.BLUE} id="Title" title="Chess Wins Net">
         <Splash />
       </Screen>
       {content.map((element, index) => (
@@ -27,7 +42,7 @@ function App() {
           title={element.title}
           floating
         >
-          {element.content}
+          {scrollPosition >= index ? element.content : null}
         </Screen>
       ))}
 
