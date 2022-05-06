@@ -8,9 +8,9 @@ import { TitleDistributionTitle, TitleDistribution } from "./components/Charts";
 function App() {
   const content = [
     { title: TitleDistributionTitle, content: <TitleDistribution /> },
-    { title: TitleDistributionTitle, content: <TitleDistribution /> },
-    { title: TitleDistributionTitle, content: <TitleDistribution /> },
-    { title: TitleDistributionTitle, content: <TitleDistribution /> },
+    // { title: TitleDistributionTitle, content: <TitleDistribution /> },
+    // { title: TitleDistributionTitle, content: <TitleDistribution /> },
+    // { title: TitleDistributionTitle, content: <TitleDistribution /> },
   ];
   const [scrollPosition, setScrollPosition] = useState(0);
   const currScroll = useRef(0);
@@ -38,7 +38,7 @@ function App() {
         <Screen
           randomColor
           id={index}
-          key={index}
+          key={element.title}
           title={element.title}
           floating
         >

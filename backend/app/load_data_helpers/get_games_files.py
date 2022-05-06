@@ -3,6 +3,7 @@ import contextlib
 import os
 import re
 import shutil
+import time
 
 import requests
 from tqdm import tqdm
@@ -18,18 +19,27 @@ extract_date_re = re.compile(
 def download_game(game_url):
     """
     Downloads the file at the given URL to /tmp/filename
-    and returns the local filepath.
+    and returns local_filepath, already_downloaded
     """
     os.makedirs("/tmp", exist_ok=True)
     filepath = "/tmp/" + game_url.split("/")[-1]
+    downloading_filepath = filepath + ".downloading"
     if os.path.exists(filepath):
-        return filepath
+        return filepath, True
+    if os.path.exists(downloading_filepath) and not os.path.exists(filepath):
+        print("Waiting for download to finish (from other script)...")
+        while os.path.exists(downloading_filepath) and not os.path.exists(filepath):
+            time.sleep(1)
+        print("Download finished.")
+    if os.path.exists(filepath):
+        return filepath, True
     with requests.get(game_url, stream=True) as r:
         file_size = int(r.headers.get("Content-Length", 0)) or None
-        with open(filepath, "wb") as f:
+        with open(downloading_filepath, "wb") as f:
             with tqdm.wrapattr(r.raw, "read", total=file_size) as r_raw:
                 shutil.copyfileobj(r_raw, f)
-    return filepath
+    os.rename(downloading_filepath, filepath)
+    return filepath, False
 
 
 def get_games_files(
@@ -67,13 +77,13 @@ def get_games_files(
             break
 
         print(f"Downloading game file for {date}...")
-        filepath = download_game(game_url)
+        filepath, already_downloaded = download_game(game_url)
 
         @contextlib.contextmanager
         def get_context():
             with bz2.open(filepath, "rt") as f:
                 yield f
-            if not save_files:
+            if not save_files and not already_downloaded:
                 os.remove(filepath)
 
         yield get_context

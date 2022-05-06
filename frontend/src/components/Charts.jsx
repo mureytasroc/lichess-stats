@@ -6,7 +6,6 @@ export const TitleDistributionTitle = "Title Distribution";
 export function TitleDistribution() {
   const [data, setData] = useState([]);
   useEffect(() => {
-    console.log("RERENDER");
     (async () => {
       const result = await doApiRequest("/profile/title/distribution");
       setData(
@@ -18,9 +17,9 @@ export function TitleDistribution() {
   return (
     <Bar
       data={data}
-      xField={"count"}
-      yField={"title"}
-      seriesField={"title"}
+      xField="count"
+      yField="title"
+      seriesField="title"
       autoFit
     />
   );

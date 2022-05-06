@@ -21,7 +21,7 @@ REPLACE INTO Player (
 
      bullet_rating,
      bullet_rd,
-     bulletprog,
+     bullet_prog,
      bullet_num_games,
 
      blitz_rating,

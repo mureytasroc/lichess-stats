@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import styles from "./Screen.module.css";
 
 const COLORS = {
@@ -11,7 +11,7 @@ const COLORS = {
 };
 
 function Screen({ id, title, theme, randomColor, children, floating }) {
-  let keys = Object.keys(COLORS);
+  const keys = Object.keys(COLORS);
   // const color = COLORS[keys[(keys.length * Math.random()) << 0]];
   const color = COLORS[keys[id % keys.length]];
 

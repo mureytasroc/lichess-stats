@@ -1,49 +1,17 @@
-import React, { Suspense, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { useRef } from "react";
+import { Canvas } from "@react-three/fiber";
 
-import {
-  useGLTF,
-  OrbitControls,
-  PresentationControls,
-} from "@react-three/drei";
-import * as THREE from "three";
+import { useGLTF, OrbitControls } from "@react-three/drei";
+// import * as THREE from "three";
 
 const GLTF_FILE = "/Chess_Board_v2 (1).gltf";
-const ROTATE_SPEED = Math.PI / 50;
-const LEFT_MAX_ROTATE = -Math.PI + 0.25;
-const RIGHT_MAX_ROTATE = 0.5;
-// function Model() {
-//   const { scene, animations, nodes, materials } = useGLTF(GLTF_FILE);
-//   console.log(scene, animations, nodes, materials);
-//   scene.position.y = 2;
-//   let flip = false;
-//   useFrame(() => {
-//     if (scene.rotation.y < LEFT_MAX_ROTATE) {
-//       flip = true;
-//     }
-//     if (scene.rotation.y > RIGHT_MAX_ROTATE) {
-//       flip = false;
-//     }
-//     let modifier =
-//       (Math.min(
-//         Math.abs(scene.rotation.y - LEFT_MAX_ROTATE),
-//         Math.abs(scene.rotation.y - RIGHT_MAX_ROTATE)
-//       ) +
-//         0.2) /
-//       (RIGHT_MAX_ROTATE - LEFT_MAX_ROTATE);
-
-//     scene.rotation.y += (flip ? 1 : -1) * ROTATE_SPEED * modifier * modifier;
-//   });
-//   return (
-//     <Suspense fallback={null}>
-//       <primitive object={scene} scale={1} />
-//     </Suspense>
-//   );
-// }
+// const ROTATE_SPEED = Math.PI / 50;
+// const LEFT_MAX_ROTATE = -Math.PI + 0.25;
+// const RIGHT_MAX_ROTATE = 0.5;
 
 function Model(props) {
   const group = useRef();
-  const { scene, nodes, materials } = useGLTF(GLTF_FILE);
+  const { nodes, materials } = useGLTF(GLTF_FILE);
 
   return (
     <group ref={group} {...props} dispose={null}>

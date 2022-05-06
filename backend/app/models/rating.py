@@ -183,10 +183,30 @@ class ResultPercentagesByRating2DEntry(BaseModel):
         le=100,
         description="The average win percentage (0-100) of the white player in this bin.",
     )
+    white_draw_percentage: float = Field(
+        ge=0,
+        le=100,
+        description="The average draw percentage (0-100) of the white player in this bin.",
+    )
+    white_loss_percentage: float = Field(
+        ge=0,
+        le=100,
+        description="The average loss percentage (0-100) of the white player in this bin.",
+    )
     black_win_percentage: float = Field(
         ge=0,
         le=100,
         description="The average win percentage (0-100) of the black player in this bin.",
+    )
+    black_draw_percentage: float = Field(
+        ge=0,
+        le=100,
+        description="The average draw percentage (0-100) of the black player in this bin.",
+    )
+    black_loss_percentage: float = Field(
+        ge=0,
+        le=100,
+        description="The average loss percentage (0-100) of the black player in this bin.",
     )
 
 

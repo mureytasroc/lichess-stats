@@ -1,12 +1,13 @@
 import argparse
+import asyncio
 import re
-import time
+import selectors
 from datetime import datetime
 
-import requests
+import aiohttp
 from tqdm import tqdm
 
-from app.database.connect import get_db_connection
+from app.database.connect import get_async_db_connection, get_db_connection
 from app.load_data_helpers.get_games_files import get_games_files
 from app.sql.statements import upsert_players
 
@@ -14,13 +15,21 @@ from app.sql.statements import upsert_players
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
 
 parser.add_argument(
-    "--batch-size",
+    "--queue-limit",
+    "-q",
     type=int,
     default=100,
     help=(
-        "The number of usernames to load at once from game files. "
-        "Regardless, profiles are always individually committed."
+        "The max size of the username and profile queues (used for concurrent processing/loading)."
     ),
+)
+
+parser.add_argument(
+    "--num-profile-consumers",
+    "-c",
+    type=int,
+    default=1,
+    help=("The number of profile consumer tasks (committing profiles to the db)."),
 )
 
 parser.add_argument(
@@ -54,6 +63,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--save-files",
+    "-s",
     action="store_true",
     help=(
         "Use this flag to prevent game files from being deleted from the /tmp directory "
@@ -61,10 +71,29 @@ parser.add_argument(
     ),
 )
 
+parser.add_argument(
+    "--num-workers",
+    "-w",
+    type=int,
+    default=1,
+    help=("The number of workers (on different computers) to use."),
+)
+
+parser.add_argument(
+    "--worker-num",
+    "-n",
+    type=int,
+    default=0,
+    help=("The number of this machine's worker, in the range [0..worker_num)."),
+)
+
 args = parser.parse_args()
 
 
-assert args.batch_size > 0
+assert args.queue_limit > 0
+assert args.num_profile_consumers > 0
+assert args.num_workers > 0
+assert 0 <= args.worker_num < args.num_workers
 
 
 def get_existing_usernames():
@@ -80,33 +109,65 @@ def get_existing_usernames():
 
 
 existing_usernames = get_existing_usernames()
-usernames_to_load = set()
 
 
-def get_profile(username):
+username_re = re.compile(r'^\[(?:White|Black) "(.+)"\]$')
+
+
+async def username_producer(game_file, username_queue):
+    for i, line in enumerate(game_file):
+        match = username_re.match(line)
+        if not match:
+            continue
+        username = match.group(1)
+        if username in existing_usernames:
+            continue
+        existing_usernames.add(username)
+        if i % args.num_workers != args.worker_num:
+            continue
+        await username_queue.put(username)
+    await username_queue.put(None)
+
+
+async def get_profile(session, username):
     while True:
-        response = requests.get(f"https://lichess.org/api/user/{username}")
-        if response.status_code != 429:
-            break
-        print("Lichess API rate limit exceeded.")
-        time.sleep(60)
-    return response.json(), response.status_code
+        try:
+            async with session.get(f"https://lichess.org/api/user/{username}") as response:
+                response_json = await response.json()
+                response_code = response.status
+                if response_code == 429:
+                    tqdm.write("Lichess API rate limit exceeded.")
+                    await asyncio.sleep(60)
+                    continue
+                if response_code != 200:
+                    tqdm.write(f"Error loading profile for {username}: {response_code}.")
+                    return None, None
+                return response_json, response_code
+        except aiohttp.client_exceptions.ServerDisconnectedError:
+            tqdm.write(f"Server disconnected for {username}.")
+            return None, None
+        except aiohttp.client_exceptions.ContentTypeError:
+            tqdm.write(f"Content-Type error for {username}.")
+            return None, None
+        except asyncio.TimeoutError:
+            tqdm.write(f"Timeout error for {username}.")
+            return None, None
 
 
 def parse_timestamp(ts):
     return datetime.utcfromtimestamp(ts / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def load_usernames(pbar):
-    global existing_usernames
-    global usernames_to_load
+async def profile_producer(username_queue, profile_queue):
+    async with aiohttp.ClientSession() as session:
+        while True:
+            username = await username_queue.get()
+            if username is None:
+                await profile_queue.put(None)
+                break
 
-    with get_db_connection() as connection:
-        for username in usernames_to_load:
-            profile, response_code = get_profile(username)
-
-            if response_code != 200:
-                print(f"Error loading profile for {username}: {response_code}")
+            profile, response_code = await get_profile(session, username)
+            if response_code is None:
                 continue
 
             profile["profile"] = profile.get("profile", dict())
@@ -158,32 +219,58 @@ def load_usernames(pbar):
             record.append(profile.get("verified", False))
             record.append(profile.get("tosViolation", False))
 
-            with connection.cursor() as cursor:
-                cursor.execute(upsert_players, tuple(record))
-            connection.commit()
+            await profile_queue.put(tuple(record))
+
+
+async def profile_consumer(queue, pbar):
+    pool = await get_async_db_connection()
+
+    async with pool.acquire() as conn:
+        while True:
+            tup = await queue.get()
+            if tup is None:
+                break
+            async with conn.cursor() as cur:
+                await cur.execute(upsert_players, tup)
+            await conn.commit()
             pbar.update(1)
-        existing_usernames |= usernames_to_load
-        usernames_to_load.clear()
+
+    pool.close()
+    await pool.wait_closed()
 
 
-username_re = re.compile(r'^\[(?:White|Black) "(.+)"\]$')
+async def load_profiles():
+    for game_file_context in get_games_files(
+        from_date=args.from_date,
+        to_date=args.to_date,
+        ascending=args.ascending,
+        save_files=args.save_files,
+    ):
+        with game_file_context() as game_file:
+            username_queue = asyncio.Queue(maxsize=args.queue_limit)
+            profile_queue = asyncio.Queue(maxsize=args.queue_limit)
+            with tqdm() as pbar:
+                username_producer_task = asyncio.create_task(
+                    username_producer(game_file, username_queue)
+                )
+                profile_producer_task = asyncio.create_task(
+                    profile_producer(username_queue, profile_queue)
+                )
+                profile_consumer_tasks = [
+                    asyncio.create_task(profile_consumer(profile_queue, pbar))
+                    for _ in range(args.num_profile_consumers)
+                ]
 
-for game_file_context in get_games_files(
-    from_date=args.from_date,
-    to_date=args.to_date,
-    ascending=args.ascending,
-    save_files=args.save_files,
-):
-    with game_file_context() as game_file:
-        print("Loading profiles...")
-        with tqdm() as pbar:
-            for line in game_file:
-                match = username_re.match(line)
-                if not match:
-                    continue
-                username = match.group(1)
-                if username in existing_usernames:
-                    continue
-                usernames_to_load.add(username)
-                if len(usernames_to_load) >= args.batch_size:
-                    load_usernames(pbar)
+                await asyncio.gather(
+                    username_producer_task,
+                    profile_producer_task,
+                    *profile_consumer_tasks,
+                )
+                await username_queue.join()
+                await profile_queue.join()
+
+
+selector = selectors.SelectSelector()
+loop = asyncio.SelectorEventLoop(selector)
+asyncio.set_event_loop(loop)
+asyncio.run(load_profiles())
