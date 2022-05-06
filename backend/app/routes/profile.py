@@ -39,7 +39,6 @@ mydb = pymysql.connect(
 )
 async def title_distribution():
     # TODO
-    print("SHOULD FETCH")
     q = """
     SELECT title, COUNT(*) as count
     FROM Player
@@ -59,15 +58,16 @@ async def title_distribution():
     response_model=CompletionRateByTitle,
 )
 async def completion_rate_by_title():
-    # TODO
+    q = """
+    SELECT title, AVG(completion_rate) as avg_completion_rate, STD(completion_rate) as stddev_completion_rate
+    FROM Player
+    GROUP BY title
+    """
+    with mydb.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute(q, [])
+        result = cur.fetchall()
     return {
-        "titles": [
-            {
-                "title": "GM",
-                "avg_completion_rate": 80,
-                "stddev_completion_rate": 10,
-            }
-        ]
+        "titles": result
     }
 
 
@@ -77,17 +77,38 @@ async def completion_rate_by_title():
     response_model=ResultPercentagesByTitle,
 )
 async def result_percentages_by_title():
-    # TODO
+    q = """
+    WITH PLAYER_PERCETAGES AS (
+        SELECT title,
+            wins / (wins + losses + draws) as win_percentage,
+            losses / (wins + losses + draws) as loss_percentage,
+            draws / (wins + losses + draws) as draw_percentage
+        FROM Player
+    )
+    SELECT title,
+        AVG(win_percentage) as win_percentage,
+        AVG(loss_percentage) as loss_percentage,
+        AVG(draw_percentage) as draw_percentage
+    FROM PLAYER_PERCETAGES
+    GROUP BY title
+    """
+    with mydb.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute(q, [])
+        result = cur.fetchall()
     return {
-        "titles": [
-            {
-                "title": "GM",
-                "win_percentage": 80,
-                "draw_percentage": 80,
-                "loss_percentage": 80,
-            }
-        ]
+        "titles": result
     }
+
+    # return {
+    #     "titles": [
+    #         {
+    #             "title": "GM",
+    #             "win_percentage": 80,
+    #             "draw_percentage": 80,
+    #             "loss_percentage": 80,
+    #         }
+    #     ]
+    # }
 
 
 @router.get(
@@ -163,7 +184,7 @@ async def game_length_by_title(
     "/country/distribution",
     description="Get the distribution of players by country.",  # noqa: E501
     response_model=CountryDistribution,
-    
+
 )
 async def country_distribution():
     # TODO
