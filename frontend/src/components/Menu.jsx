@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Menu } from "antd";
+import Icon from "@ant-design/icons";
+
+import { ChessIcon, ClockIcon, RatingIcon, WinnerIcon } from "./Icons";
 
 export default function MenuBar({ content, scroll }) {
   const items = [
     {
       key: "-1",
       label: "Cover",
+      icon: <Icon component={ChessIcon} />,
     },
     {
       key: "Profile",
@@ -18,6 +22,7 @@ export default function MenuBar({ content, scroll }) {
             label: title,
           })),
       ],
+      icon: <Icon component={WinnerIcon} />,
     },
     {
       key: "Game",
@@ -30,18 +35,20 @@ export default function MenuBar({ content, scroll }) {
             label: title,
           })),
       ],
+      icon: <Icon component={ClockIcon} />,
     },
     {
-      key: "Player",
-      label: "Player",
+      key: "Rating",
+      label: "Rating",
       children: [
         ...content
-          .filter((e) => e.group === "Player")
+          .filter((e) => e.group === "Rating")
           .map(({ title }, index) => ({
             key: index,
             label: title,
           })),
       ],
+      icon: <Icon component={RatingIcon} />,
     },
   ];
 

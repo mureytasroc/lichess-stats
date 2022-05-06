@@ -23,6 +23,7 @@
         "react/jsx-filename-extension": 0,
         "react/prop-types": 0,
         "react/jsx-props-no-spreading" : 0,
-        "camelcase": 0
+        "camelcase": 0,
+        "react/self-closing-comp": 0
     }
 }
