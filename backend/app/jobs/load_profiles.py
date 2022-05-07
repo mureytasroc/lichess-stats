@@ -283,7 +283,7 @@ async def load_profiles_orch():
 
     if args.from_games_db:
 
-        async def username_producer():
+        async def trivial_username_producer():
             while True:
                 no_new_usernames = True
                 for i, username in enumerate(get_games_db_usernames()):
@@ -296,7 +296,7 @@ async def load_profiles_orch():
                     break
             await username_queue.put(None)
 
-        username_producer_task = asyncio.create_task(username_producer())
+        username_producer_task = asyncio.create_task(trivial_username_producer())
         await load_profiles(username_queue, username_producer_task)
     else:
         for game_file_context in get_games_files(
