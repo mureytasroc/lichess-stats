@@ -188,7 +188,7 @@ ORDER BY Total_Games DESC;'''
     "/AvgTimeToWin",
     description="Ratio of King to Queen Castling." # noqa: E,
 )
-async def ratio(username: Optional[str] = None):
+async def avgTime(username: Optional[str] = None):
     curr = connection.cursor()
     if not username:
         sql = '''WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
