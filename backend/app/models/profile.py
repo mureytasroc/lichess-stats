@@ -2,14 +2,22 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.database.util import Title
+from app.database.util import Title, TerminationType
 
 
 # Titles
 
 
 class TitleEntry(BaseModel):
-    title: Optional[Title] = Field(description="The player title (or null if untitled).")
+    title: Optional[Title] = Field(description=f"The player title (or null if untitled)")
+
+
+class TitleDescriptionEntry(TitleEntry):
+    description: str = Field(description="A description of this title.")
+
+
+class TitleDescription(BaseModel):
+    titles: List[TitleDescriptionEntry] = Field(description="An array of title entries.")
 
 
 class TitleDistributionEntry(TitleEntry):
@@ -51,31 +59,25 @@ class ResultPercentagesByTitle(BaseModel):
     titles: List[ResultPercentagesByTitleEntry] = Field(description="An array of title entries.")
 
 
-class GameTerminationTypeByTitleEntry(TitleEntry):
-    normal_percentage: float = Field(
+class GameTerminationTypeByTitleEntryTerminationType(BaseModel):
+    termination_type: TerminationType = Field(description="The termination type.")
+    percentage: float = Field(
         ge=0,
         le=100,
-        description="The percentage (0-100) of games that terminated normally (e.g. checkmate or draw) played by players with this title.",  # noqa: E501
+        description="The percentage (0-100) of games with this termination type, played by players with this title.",  # noqa: E501
     )
-    resignation_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by resignation played by players with this title.",  # noqa: E501
-    )
-    time_forfeit_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by time forfeit played by players with this title.",  # noqa: E501
-    )
-    abandoned_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by abandonment played by players with this title.",  # noqa: E501
+
+
+class GameTerminationTypeByTitleEntryTitle(TitleEntry):
+    termination_types: List[GameTerminationTypeByTitleEntryTerminationType] = Field(
+        description="An array of termination type entries."
     )
 
 
 class GameTerminationTypeByTitle(BaseModel):
-    titles: List[GameTerminationTypeByTitleEntry] = Field(description="An array of title entries.")
+    titles: List[GameTerminationTypeByTitleEntryTitle] = Field(
+        description="An array of title entries."
+    )
 
 
 class GameLengthByTitleEntry(TitleEntry):
@@ -150,31 +152,23 @@ class ResultPercentagesByCountry(BaseModel):
     )
 
 
-class GameTerminationTypeByCountryEntry(CountryEntry):
-    normal_percentage: float = Field(
+class GameTerminationTypeByCountryEntryTerminationType(BaseModel):
+    termination_type: TerminationType = Field(description="The termination type.")
+    percentage: float = Field(
         ge=0,
         le=100,
-        description="The percentage (0-100) of games that terminated normally (e.g. checkmate or draw) played by players from this country.",  # noqa: E501
+        description="The percentage (0-100) of games with this termination type, played by players from this country.",  # noqa: E501
     )
-    resignation_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by resignation played by players from this country.",  # noqa: E501
-    )
-    time_forfeit_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by time forfeit played by players from this country.",  # noqa: E501
-    )
-    abandoned_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by abandonment played by players from this country.",  # noqa: E501
+
+
+class GameTerminationTypeByCountryEntryCountry(CountryEntry):
+    termination_types: List[GameTerminationTypeByCountryEntryTerminationType] = Field(
+        description="An array of termination type entries."
     )
 
 
 class GameTerminationTypeByCountry(BaseModel):
-    countries: List[GameTerminationTypeByCountryEntry] = Field(
+    countries: List[GameTerminationTypeByCountryEntryCountry] = Field(
         description="An array of country entries."
     )
 

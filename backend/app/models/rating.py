@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.database.util import Title
+from app.database.util import Title, TerminationType
 
 
 class RatingBin(BaseModel):
@@ -227,26 +227,24 @@ class GameLengthByRating(BaseModel):
     bins: List[GameLengthByRatingEntry] = Field(description="An array of rating bins.")
 
 
-class GameTerminationTypeByRatingEntry(RatingBin):
-    normal_percentage: float = Field(
+class GameTerminationTypeByRatingEntryTerminationType(BaseModel):
+    termination_type: TerminationType = Field(description="The termination type.")
+    percentage: float = Field(
         ge=0,
         le=100,
-        description="The percentage (0-100) of games that terminated normally (e.g. checkmate or draw) in this rating bin.",  # noqa: E501
+        description="The percentage (0-100) of games with this termination type, in this rating bin.",  # noqa: E501
     )
-    resignation_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by resignation in this rating bin.",  # noqa: E501
+
+
+class GameTerminationTypeByRatingEntryRating(RatingBin):
+    termination_types: List[GameTerminationTypeByRatingEntryTerminationType] = Field(
+        description="An array of termination type entries."
     )
-    time_forfeit_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by time forfeit in this rating bin.",  # noqa: E501
-    )
-    abandoned_percentage: float = Field(
-        ge=0,
-        le=100,
-        description="The percentage (0-100) of games that terminated by abandonment in this rating bin.",  # noqa: E501
+
+
+class GameTerminationTypeByRating(BaseModel):
+    bins: List[GameTerminationTypeByRatingEntryRating] = Field(
+        description="An array of rating bins."
     )
 
 
@@ -259,10 +257,6 @@ class NumOpeningsByRatingEntry(RatingBin):
 
 class NumOpeningsByRating(BaseModel):
     bins: List[NumOpeningsByRatingEntry] = Field(description="An array of rating bins.")
-
-
-class GameTerminationTypeByRating(BaseModel):
-    bins: List[GameTerminationTypeByRatingEntry] = Field(description="An array of rating bins.")
 
 
 class AccuracyByRatingEntry(RatingBin):

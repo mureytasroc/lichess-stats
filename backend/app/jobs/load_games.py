@@ -7,7 +7,7 @@ import chess.pgn
 from tqdm import tqdm
 
 from app.database.connect import get_async_db_connection, get_db_connection
-from app.database.util import categories
+from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
 from app.sql.statements import upsert_evaluation, upsert_game, upsert_moves, upsert_time_remaining
 
@@ -135,7 +135,7 @@ async def game_producer(game_file, game_queue):
 
         start_timestamp = headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
 
-        category = (categories & set(headers["Event"].split())).pop()
+        category = ({c.value for c in GameType} & set(headers["Event"].split())).pop()
 
         time_control_base, time_control_increment = (
             list(map(int, headers["TimeControl"].split("+")))
@@ -168,6 +168,20 @@ async def game_producer(game_file, game_queue):
             tqdm.write(f"Unexpected result: '{result}'. Skipping game.")
             continue
         termination = headers["Termination"]
+        if termination == "Unterminated":
+            continue
+        if termination == "Normal":
+            outcome = game.end().outcome(claim_draw=True)
+            if outcome is None:
+                termination = "DrawAgreement" if result == "1/2-1/2" else "Resignation"
+            else:
+                termination = [t.value for t in TerminationType][outcome.termination.value + 2]
+        else:
+            termination = {
+                "Time forfeit": "TimeForfeit",
+                "Rules infraction": "RulesInfraction",
+                "Abandoned": "Resignation",
+            }[termination]
 
         game_tup = (
             lichess_id,

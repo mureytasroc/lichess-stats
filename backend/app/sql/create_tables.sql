@@ -82,9 +82,9 @@ CREATE TABLE IF NOT EXISTS Game
      
      opening_name              VARCHAR(256) NOT NULL,
      opening_ec0               CHAR(3) NOT NULL, -- less specific than opening_name
-     
+
      result                    ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
-     termination               VARCHAR(32) NOT NULL,
+     termination               ENUM('Checkmate', 'Resignation', 'DrawAgreement', 'Stalemate', 'InsufficientMaterial', 'FiftyMoveRule', 'ThreefoldRepetition', 'SeventyFiveMoveRule', 'FivefoldRepetition', 'TimeForfeit', 'RulesInfraction') NOT NULL,
      white_rating_diff         SMALLINT, -- white's rating change from game
      black_rating_diff         SMALLINT -- ^
   );
