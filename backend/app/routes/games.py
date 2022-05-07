@@ -163,3 +163,75 @@ ORDER BY Total_Games DESC;'''
     #print(sql)
     return {JSONResponse(content=jsonable_encoder(result))}
 
+
+router.get(
+    "/totalWins",
+    description="Descending order of Country Win Percentages",  # noqa: E,
+)
+
+async def total_wins():
+    curr = connection.cursor()
+    sql = '''SELECT Country, SUM(num_games) as Total_Games FROM Player
+WHERE Country is not NULL
+GROUP BY Country
+ORDER BY Total_Games DESC;'''
+    print(sql)
+    curr.execute(sql)
+    result = curr.fetchall()
+    print(result)
+    #print(sql)
+    return {JSONResponse(content=jsonable_encoder(result))}
+
+
+
+@router.get(
+    "/AvgTimeToWin",
+    description="Ratio of King to Queen Castling." # noqa: E,
+)
+async def ratio(username: Optional[str] = None):
+    curr = connection.cursor()
+    if not username:
+        sql = '''WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
+              Player CROSS JOIN Game on Player.username = Game.white_username
+            where result = '1-0'),
+     white_time AS (SELECT username, lichess_id, (MAX(white_hundredths) - MIN(white_hundredths)) as time FROM
+         player_game_white JOIN TimeRemaining on player_game_white.lichess_id = TimeRemaining.game_id
+         GROUP BY username, lichess_id
+         ),
+    player_game_black AS (SELECT DISTINCT username, lichess_id,result FROM
+              Player JOIN Game on Player.username = Game.black_username
+        where result = '0-1'
+    ),
+     black_time AS (SELECT username, game_id, (MAX(black_hundredths) - MIN(black_hundredths)) as time FROM
+         player_game_black JOIN TimeRemaining on player_game_black.lichess_id = TimeRemaining.game_id
+         GROUP BY username, game_id
+       ),
+  time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
+SELECT username, AVG(time) as "Average Time to Win"
+FROM time_union
+GROUP BY username;'''
+    else:
+        sql = '''
+        WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
+              Player CROSS JOIN Game on Player.username = Game.white_username
+            where result = '1-0'),
+     white_time AS (SELECT username, lichess_id, (MAX(white_hundredths) - MIN(white_hundredths)) as time FROM
+         player_game_white JOIN TimeRemaining on player_game_white.lichess_id = TimeRemaining.game_id
+         GROUP BY username, lichess_id
+         ),
+    player_game_black AS (SELECT DISTINCT username, lichess_id,result FROM
+              Player JOIN Game on Player.username = Game.black_username
+        where result = '0-1'
+    ),
+     black_time AS (SELECT username, game_id, (MAX(black_hundredths) - MIN(black_hundredths)) as time FROM
+         player_game_black JOIN TimeRemaining on player_game_black.lichess_id = TimeRemaining.game_id
+         GROUP BY username, game_id
+       ),
+  time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
+SELECT username, AVG(time) as "Average Time to Win"
+FROM time_union
+WHERE username = \'''' + username + "\' ; "
+    
+    curr.execute(sql)
+    result = curr.fetchall()
+    return {JSONResponse(content=jsonable_encoder(result))}
