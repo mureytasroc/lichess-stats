@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS Player
      tos_violation             BOOLEAN NOT NULL -- user has violated lichess TOS
   );
 
+CREATE TABLE EcoCodes
+(
+    code                       varchar(10)  not null primary key,
+    opening_name               varchar(256) null,
+    opening_moves              varchar(256) null
+);
 
 CREATE TABLE IF NOT EXISTS Game
   (
@@ -81,7 +87,7 @@ CREATE TABLE IF NOT EXISTS Game
      black_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
      opening_name              VARCHAR(256) NOT NULL,
-     opening_ec0               CHAR(3) NOT NULL, -- less specific than opening_name
+     opening_eco               CHAR(3) NOT NULL, -- less specific than opening_name
 
      result                    ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
      termination               ENUM('Checkmate', 'Resignation', 'DrawAgreement', 'Stalemate', 'InsufficientMaterial', 'FiftyMoveRule', 'ThreefoldRepetition', 'SeventyFiveMoveRule', 'FivefoldRepetition', 'TimeForfeit', 'RulesInfraction') NOT NULL,
@@ -91,9 +97,10 @@ CREATE TABLE IF NOT EXISTS Game
 
 CREATE INDEX game_white_username_idx ON Game(white_username);
 CREATE INDEX game_black_username_idx ON Game(black_username);
+CREATE INDEX opening_eco_idx ON Game(opening_eco);
 
 
-CREATE TABLE IF NOT EXISTS Moves
+CREATE TABLE IF NOT EXISTS GameMove
   (
      game_id                   CHAR(8),
      ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)

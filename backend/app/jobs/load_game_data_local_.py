@@ -39,16 +39,12 @@ def read_data():
                 continue
 
             tournament_id = (
-                t[0]
-                if (t := re.findall(r"tournament/(.*)\"", headers["Event"]))
-                else None
+                t[0] if (t := re.findall(r"tournament/(.*)\"", headers["Event"])) else None
             )
 
             lichess_id = re.findall(r"org/(.*)", headers["Site"])[0]
 
-            start_timestamp = (
-                headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
-            )
+            start_timestamp = headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
 
             categories = {
                 "Bullet",
@@ -76,18 +72,14 @@ def read_data():
             black_title = headers.get("BlackTitle", None)
 
             white_rating_diff = (
-                int(headers["WhiteRatingDiff"])
-                if headers.get("WhiteRatingDiff")
-                else None
+                int(headers["WhiteRatingDiff"]) if headers.get("WhiteRatingDiff") else None
             )
             black_rating_diff = (
-                int(headers["BlackRatingDiff"])
-                if headers.get("WhiteRatingDiff")
-                else None
+                int(headers["BlackRatingDiff"]) if headers.get("WhiteRatingDiff") else None
             )
 
             opening_name = headers["Opening"]
-            opening_ec0 = headers["ECO"]
+            opening_eco = headers["ECO"]
 
             result = headers["Result"]
             termination = (
@@ -147,7 +139,7 @@ def read_data():
                 white_rating_diff,
                 black_rating_diff,
                 opening_name,
-                opening_ec0,
+                opening_eco,
                 result,
                 termination,
             ), moves, evals, times
@@ -156,13 +148,13 @@ def read_data():
 def insert_into_db(game_values, move_values, eval_values, time_values, cur):
     q = """
     INSERT IGNORE INTO `Game` (lichess_id, tournament_id, start_timestamp, category, time_control_base, time_control_increment, white_username, black_username, white_elo, 
-    black_elo, white_title, black_title, white_rating_diff, black_rating_diff, opening_name, opening_ec0, result, termination)
+    black_elo, white_title, black_title, white_rating_diff, black_rating_diff, opening_name, opening_eco, result, termination)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     cur.execute(q, game_values)
 
     q2 = """
-    INSERT IGNORE INTO `Moves` (game_id, ply, move_notation) VALUES (%s, %s, %s)"""
+    INSERT IGNORE INTO `GameMove` (game_id, ply, move_notation) VALUES (%s, %s, %s)"""
     cur.executemany(q2, move_values)
 
     q3 = """

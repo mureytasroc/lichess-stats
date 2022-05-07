@@ -8,7 +8,7 @@ class GameType(StrEnum):
     Bullet = auto()
     Blitz = auto()
     Rapid = auto()
-    Classsical = auto()
+    Classical = auto()
     Correspondence = auto()
 
 

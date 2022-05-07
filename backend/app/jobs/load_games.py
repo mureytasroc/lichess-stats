@@ -10,6 +10,7 @@ from app.database.connect import get_async_db_connection, get_db_connection
 from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
 from app.sql.statements import upsert_evaluation, upsert_game, upsert_moves, upsert_time_remaining
+from decimal import Decimal
 
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
@@ -135,7 +136,11 @@ async def game_producer(game_file, game_queue):
 
         start_timestamp = headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
 
-        category = ({c.value for c in GameType} & set(headers["Event"].split())).pop()
+        try:
+            category = ({c.value for c in GameType} & set(headers["Event"].split())).pop()
+        except KeyError as e:
+            print(headers["Event"])
+            raise e
 
         time_control_base, time_control_increment = (
             list(map(int, headers["TimeControl"].split("+")))
@@ -159,7 +164,7 @@ async def game_producer(game_file, game_queue):
         )
 
         opening_name = headers["Opening"]
-        opening_ec0 = headers["ECO"]
+        opening_eco = headers["ECO"]
 
         result = headers["Result"]
         if result == "*":
@@ -171,7 +176,7 @@ async def game_producer(game_file, game_queue):
         if termination == "Unterminated":
             continue
         if termination == "Normal":
-            outcome = game.end().outcome(claim_draw=True)
+            outcome = game.end().board().outcome(claim_draw=True)
             if outcome is None:
                 termination = "DrawAgreement" if result == "1/2-1/2" else "Resignation"
             else:
@@ -197,7 +202,7 @@ async def game_producer(game_file, game_queue):
             black_elo,
             black_title,
             opening_name,
-            opening_ec0,
+            opening_eco,
             result,
             termination,
             white_rating_diff,
@@ -229,11 +234,12 @@ async def game_producer(game_file, game_queue):
         for move in move_nodes:
             if not move.eval():
                 continue
-            relative_eval = move.eval().relative
-            score = relative_eval.score()
-            forced_mate = relative_eval.mate()
+            relative_eval = move.eval()
+            score = relative_eval.white().score()
+            forced_mate = relative_eval.white().mate()
             if score is None and forced_mate is None:
                 continue
+            score = score and Decimal(score) / Decimal(100)
             evaluation.append(
                 (
                     lichess_id,

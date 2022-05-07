@@ -1,4 +1,4 @@
-REPLACE INTO Moves (
+REPLACE INTO GameMove (
      game_id,
      ply,
      move_notation

@@ -16,7 +16,7 @@ INSERT IGNORE INTO Game (
      black_title,
      
      opening_name,
-     opening_ec0,
+     opening_eco,
      
      result,
      termination,

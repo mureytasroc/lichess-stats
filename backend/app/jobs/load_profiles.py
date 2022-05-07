@@ -33,6 +33,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--from-games-db",
+    "-d",
+    action="store_true",
+    help=("Use this flag to usernames from the Game table of the db instead of game files."),
+)
+
+parser.add_argument(
     "--from-date",
     type=str,
     default=None,
@@ -106,6 +113,20 @@ def get_existing_usernames():
             usernames = {row[0] for row in cursor.fetchall()}
         connection.commit()
     return usernames
+
+
+def get_games_db_usernames():
+    """
+    Loads the set of usernames from the Game table of the database.
+    """
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT white_username FROM Player UNION SELECT black_username FROM PLAYER"
+            )
+            game_usernames = {row[0] for row in cursor.fetchall()}
+        connection.commit()
+    return game_usernames
 
 
 existing_usernames = get_existing_usernames()
@@ -239,38 +260,59 @@ async def profile_consumer(queue, pbar):
     await pool.wait_closed()
 
 
-async def load_profiles():
-    for game_file_context in get_games_files(
-        from_date=args.from_date,
-        to_date=args.to_date,
-        ascending=args.ascending,
-        save_files=args.save_files,
-    ):
-        with game_file_context() as game_file:
-            username_queue = asyncio.Queue(maxsize=args.queue_limit)
-            profile_queue = asyncio.Queue(maxsize=args.queue_limit)
-            with tqdm() as pbar:
+async def load_profiles(username_queue, username_producer_task):
+    profile_queue = asyncio.Queue(maxsize=args.queue_limit)
+    with tqdm() as pbar:
+        profile_producer_task = asyncio.create_task(profile_producer(username_queue, profile_queue))
+        profile_consumer_tasks = [
+            asyncio.create_task(profile_consumer(profile_queue, pbar))
+            for _ in range(args.num_profile_consumers)
+        ]
+
+        await asyncio.gather(
+            username_producer_task,
+            profile_producer_task,
+            *profile_consumer_tasks,
+        )
+        await username_queue.join()
+        await profile_queue.join()
+
+
+async def load_profiles_orch():
+    username_queue = asyncio.Queue(maxsize=args.queue_limit)
+
+    if args.from_games_db:
+
+        async def username_producer():
+            while True:
+                no_new_usernames = True
+                for i, username in enumerate(get_games_db_usernames()):
+                    existing_usernames.add(username)
+                    if i % args.num_workers != args.worker_num:
+                        continue
+                    no_new_usernames = False
+                    await username_queue.put(username)
+                if no_new_usernames:
+                    break
+            await username_queue.put(None)
+
+        username_producer_task = asyncio.create_task(username_producer())
+        await load_profiles(username_queue, username_producer_task)
+    else:
+        for game_file_context in get_games_files(
+            from_date=args.from_date,
+            to_date=args.to_date,
+            ascending=args.ascending,
+            save_files=args.save_files,
+        ):
+            with game_file_context() as game_file:
                 username_producer_task = asyncio.create_task(
                     username_producer(game_file, username_queue)
                 )
-                profile_producer_task = asyncio.create_task(
-                    profile_producer(username_queue, profile_queue)
-                )
-                profile_consumer_tasks = [
-                    asyncio.create_task(profile_consumer(profile_queue, pbar))
-                    for _ in range(args.num_profile_consumers)
-                ]
-
-                await asyncio.gather(
-                    username_producer_task,
-                    profile_producer_task,
-                    *profile_consumer_tasks,
-                )
-                await username_queue.join()
-                await profile_queue.join()
+                await load_profiles(username_queue, username_producer_task)
 
 
 selector = selectors.SelectSelector()
 loop = asyncio.SelectorEventLoop(selector)
 asyncio.set_event_loop(loop)
-asyncio.run(load_profiles())
+asyncio.run(load_profiles_orch())
