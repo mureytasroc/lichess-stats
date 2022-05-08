@@ -61,11 +61,11 @@ CREATE TABLE IF NOT EXISTS Player
      tos_violation             BOOLEAN NOT NULL -- user has violated lichess TOS
   );
 
-CREATE TABLE EcoCodes
+CREATE TABLE EcoCode
 (
-    code                       varchar(10)  not null primary key,
-    opening_name               varchar(256) null,
-    opening_moves              varchar(256) null
+    code                       varchar(10) PRIMARY KEY,
+    opening_name               varchar(256),
+    opening_moves              varchar(512)
 );
 
 CREATE TABLE IF NOT EXISTS Game
@@ -87,17 +87,18 @@ CREATE TABLE IF NOT EXISTS Game
      black_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
      opening_name              VARCHAR(256) NOT NULL,
-     opening_eco               CHAR(3) NOT NULL, -- less specific than opening_name
+     opening_eco               CHAR(3), -- less specific than opening_name
 
      result                    ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
      termination               ENUM('Checkmate', 'Resignation', 'DrawAgreement', 'Stalemate', 'InsufficientMaterial', 'FiftyMoveRule', 'ThreefoldRepetition', 'SeventyFiveMoveRule', 'FivefoldRepetition', 'TimeForfeit', 'RulesInfraction') NOT NULL,
      white_rating_diff         SMALLINT, -- white's rating change from game
-     black_rating_diff         SMALLINT -- ^
+     black_rating_diff         SMALLINT, -- ^
+
+     FOREIGN KEY (opening_eco) REFERENCES EcoCode(code)
   );
 
-CREATE INDEX game_white_username_idx ON Game(white_username);
-CREATE INDEX game_black_username_idx ON Game(black_username);
-CREATE INDEX opening_eco_idx ON Game(opening_eco);
+CREATE INDEX game_white_username_idx ON Game(white_username); -- TODO: turn into foreign key after data is loaded
+CREATE INDEX game_black_username_idx ON Game(black_username); -- TODO: turn into foreign key after data is loaded
 
 
 CREATE TABLE IF NOT EXISTS GameMove

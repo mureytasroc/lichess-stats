@@ -9,6 +9,7 @@ from tqdm import tqdm
 from app.database.connect import get_async_db_connection, get_db_connection
 from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
+from app.load_data_helpers.util import get_allowed_eco
 from app.sql.statements import upsert_evaluation, upsert_game, upsert_moves, upsert_time_remaining
 from decimal import Decimal
 
@@ -113,6 +114,8 @@ existing_game_ids = get_existing_game_ids()
 id_re = re.compile(r"org/(.*)")
 tournament_id_re = re.compile(r"tournament/(.*)\"")
 
+allowed_eco = get_allowed_eco()
+
 
 async def game_producer(game_file, game_queue):
     i = -1
@@ -165,6 +168,8 @@ async def game_producer(game_file, game_queue):
 
         opening_name = headers["Opening"]
         opening_eco = headers["ECO"]
+        if opening_eco not in allowed_eco:
+            opening_eco = None
 
         result = headers["Result"]
         if result == "*":
