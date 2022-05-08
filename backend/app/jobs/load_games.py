@@ -129,7 +129,10 @@ def get_existing_game_ids():
 
 
 existing_game_ids = get_existing_game_ids()
-max_games = ceil((args.max_games - len(existing_game_ids)) / args.num_workers)
+
+max_games = None
+if args.max_games:
+    max_games = ceil((args.max_games - len(existing_game_ids)) / args.num_workers)
 
 id_re = re.compile(r"org/(.*)/?")
 tournament_id_re = re.compile(r"tournament/(.*)/?")
@@ -142,7 +145,7 @@ async def game_producer(game_file, game_queue):
     i = -1
     while True:
         i += 1
-        if max_games <= 0:
+        if max_games is not None and max_games <= 0:
             break
         game = chess.pgn.read_game(game_file)
         if not game:
@@ -283,7 +286,8 @@ async def game_producer(game_file, game_queue):
                 (lichess_id, move.ply(), score if forced_mate is None else None, forced_mate)
             )
 
-        max_games -= 1
+        if max_games:
+            max_games -= 1
         await game_queue.put((game_tup, moves, time_remaining, evaluation))
     await game_queue.put((None,) * 4)
 
