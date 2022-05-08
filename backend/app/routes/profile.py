@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Optional
 
 from fastapi import APIRouter, Query
+from fastapi_redis_cache import cache
 
 from app.database.connect import get_db_connection, get_dict_cursor
 from app.database.util import (
@@ -20,13 +21,12 @@ from app.models.profile import (
     GameTerminationTypeByCountry,
     GameTerminationTypeByTitle,
     ResultCountsByCountry,
+    ResultCountsByTitle,
     ResultPercentagesByCountry,
     ResultPercentagesByTitle,
     TitleDescription,
     TitleDistribution,
-    ResultCountsByTitle,
 )
-from fastapi_redis_cache import cache
 
 
 router = APIRouter()
