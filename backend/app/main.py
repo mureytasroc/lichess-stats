@@ -10,7 +10,7 @@ from app.util import in_prod, setup_sentry
 
 
 app = FastAPI(
-    title="ChessWins.net",
+    title="lichess-stats.net",
     docs_url="/api/docs",
     openapi_url="/api.json",
     openapi_tags=tags_metadata,

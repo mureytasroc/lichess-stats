@@ -9,18 +9,13 @@ from app.database.util import GameType
 from app.models.games import *
 from app.models.profile import CountryDistribution
 import pymysql.cursors
+
 router = APIRouter()
 
-from contextlib import contextmanager
-from app.database.connect import get_db_connection
+from app.database.connect import get_db_connection, get_dict_cursor
 
-db_connection = get_db_connection()
+dict_cursor = get_dict_cursor(get_db_connection())
 
-@contextmanager
-def dict_cursor():
-    with db_connection.cursor(pymysql.cursors.DictCursor) as cur:
-        yield cur
-        db_connection.commit()
 
 @router.get(
     "/CastlingPercentage",
@@ -29,7 +24,7 @@ def dict_cursor():
 async def castle(username: Optional[str] = None):
     with dict_cursor() as curr:
         if not username:
-            sql = '''WITH player_game AS (SELECT username, lichess_id FROM
+            sql = """WITH player_game AS (SELECT username, lichess_id FROM
                         Player JOIN Game on Player.username = Game.white_username
                             UNION ALL SELECT username, lichess_id FROM
                         Player JOIN Game on Player.username = Game.black_username
@@ -43,9 +38,10 @@ async def castle(username: Optional[str] = None):
                 ) GROUP BY username)
                 SELECT total_games.username, castle*100/(total) as Castling_Percentage  FROM (
                 game_moves_castle JOIN total_games ON game_moves_castle.username = total_games.username
-                );'''
+                );"""
         else:
-            sql = '''
+            sql = (
+                """
             WITH player_game AS (SELECT username, lichess_id FROM
                         Player JOIN Game on Player.username = Game.white_username
                             UNION ALL SELECT username, lichess_id FROM
@@ -60,8 +56,11 @@ async def castle(username: Optional[str] = None):
                 ) GROUP BY username)
                 SELECT total_games.username, castle*100/(total) as Castling_Percentage  FROM (
                 game_moves_castle JOIN total_games ON game_moves_castle.username = total_games.username
-                ) WHERE total_games.username = \'''' + username + "\' ; "
-        
+                ) WHERE total_games.username = \'"""
+                + username
+                + "' ; "
+            )
+
         curr.execute(sql)
         result = curr.fetchall()
 
@@ -75,14 +74,12 @@ async def castle(username: Optional[str] = None):
             ],
         }
 
-@router.get(
-    "/RatioKtoQ",
-    description="Ratio of King to Queen Castling by player" 
-)
+
+@router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
 async def ratio(username: Optional[str] = None):
     with dict_cursor() as curr:
         if not username:
-            sql = '''WITH player_game AS (SELECT username, lichess_id FROM
+            sql = """WITH player_game AS (SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.white_username
                     UNION ALL SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.black_username
@@ -101,9 +98,10 @@ async def ratio(username: Optional[str] = None):
         HAVING queen > 0)
         SELECT castle_king.username, king/queen as ratio FROM (
         castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
-        );'''
+        );"""
         else:
-            sql = '''
+            sql = (
+                """
             WITH player_game AS (SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.white_username
                     UNION ALL SELECT username, lichess_id FROM
@@ -123,8 +121,10 @@ async def ratio(username: Optional[str] = None):
         HAVING queen > 0)
         SELECT castle_king.username, king/queen as ratio  FROM (
         castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
-        ) WHERE castle_king.username = \'''' + username + "\' ; "
-        
+        ) WHERE castle_king.username = \'"""
+                + username
+                + "' ; "
+            )
 
         curr.execute(sql)
         result = curr.fetchall()
@@ -142,15 +142,14 @@ async def ratio(username: Optional[str] = None):
 
 @router.get(
     "/CountryWinPercent",
-    description="Descending order of Country Win Percentages",  
+    description="Descending order of Country Win Percentages",
 )
-
 async def win_percent():
     with dict_cursor() as curr:
-        sql = '''SELECT  Country, SUM(wins)*100/ (SUM(losses) + SUM(wins)) as Win_Percentage FROM Player
+        sql = """SELECT  Country, SUM(wins)*100/ (SUM(losses) + SUM(wins)) as Win_Percentage FROM Player
     WHERE Country is not NULL
     GROUP BY Country
-    ORDER BY Win_Percentage DESC;'''
+    ORDER BY Win_Percentage DESC;"""
         curr.execute(sql)
         result = curr.fetchall()
         return {
@@ -162,24 +161,22 @@ async def win_percent():
                 for r in result
             ],
         }
-    
 
 
 @router.get(
     "/totalWins",
-    description="Descending order of total wins by country",  
+    description="Descending order of total wins by country",
 )
-
 async def total_wins():
     with dict_cursor() as curr:
-        sql = '''SELECT Country, SUM(num_games) as Total_Games FROM Player
+        sql = """SELECT Country, SUM(num_games) as Total_Games FROM Player
     WHERE Country is not NULL
     GROUP BY Country
-    ORDER BY Total_Games DESC;'''
-    
+    ORDER BY Total_Games DESC;"""
+
         curr.execute(sql)
         result = curr.fetchall()
-    
+
         return {
             "countries": [
                 {
@@ -191,19 +188,11 @@ async def total_wins():
         }
 
 
-
-
-
-
-
-@router.get(
-    "/AvgTimeToWin",
-    description="Average Time Taken for a Player to Win" 
-)
+@router.get("/AvgTimeToWin", description="Average Time Taken for a Player to Win")
 async def avgTime(username: Optional[str] = None):
     with dict_cursor() as curr:
         if not username:
-            sql = '''WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
+            sql = """WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
                     Player CROSS JOIN Game on Player.username = Game.white_username
                 where result = '1-0'),
             white_time AS (SELECT username, lichess_id, (MAX(white_hundredths) - MIN(white_hundredths)) as time FROM
@@ -221,9 +210,10 @@ async def avgTime(username: Optional[str] = None):
         time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
         SELECT username, AVG(time) as avgTime
         FROM time_union
-        GROUP BY username;'''
+        GROUP BY username;"""
         else:
-            sql = '''
+            sql = (
+                """
             WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
                     Player CROSS JOIN Game on Player.username = Game.white_username
                 where result = '1-0'),
@@ -242,7 +232,10 @@ async def avgTime(username: Optional[str] = None):
         time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
         SELECT username, AVG(time) as avgTime
         FROM time_union
-        WHERE username = \'''' + username + "\' ; "
+        WHERE username = \'"""
+                + username
+                + "' ; "
+            )
 
         curr.execute(sql)
         result = curr.fetchall()
@@ -255,4 +248,3 @@ async def avgTime(username: Optional[str] = None):
                 for r in result
             ],
         }
-   

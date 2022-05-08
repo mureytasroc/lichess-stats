@@ -1,10 +1,8 @@
 from typing import Optional
 
 from fastapi import APIRouter, Query
-import pymysql
-from app.database.connect import get_db_connection
+from app.database.connect import get_db_connection, get_dict_cursor
 from app.database.util import exclusive_end_date, game_type_case, TerminationParity
-from contextlib import contextmanager
 
 
 from app.database.util import GameType, title_to_desc
@@ -26,14 +24,7 @@ from collections import defaultdict
 
 router = APIRouter()
 
-db_connection = get_db_connection()
-
-
-@contextmanager
-def dict_cursor():
-    with db_connection.cursor(pymysql.cursors.DictCursor) as cur:
-        yield cur
-        db_connection.commit()
+dict_cursor = get_dict_cursor(get_db_connection())
 
 
 # Titles

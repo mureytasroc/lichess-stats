@@ -50,7 +50,6 @@ REPLACE INTO Player (
      losses,
      draws,
      
-     completion_rate,
      play_time,
      lichess_tv_time,
 

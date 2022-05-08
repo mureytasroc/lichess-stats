@@ -230,7 +230,6 @@ async def profile_producer(username_queue, profile_queue):
             record.append(profile["count"].get("loss", 0))
             record.append(profile["count"].get("draw", 0))
 
-            record.append(profile.get("completionRate"))
             record.append(profile["playTime"].get("total", 0))
             record.append(profile["playTime"].get("tv", 0))
 

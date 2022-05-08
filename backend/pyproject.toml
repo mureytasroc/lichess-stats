@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "chess-wins-net"
+name = "lichess-stats"
 version = "0.1.0"
 description = "A website for analyzing the graph of wins on chess.com."
 authors = [

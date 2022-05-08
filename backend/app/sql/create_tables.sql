@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS Player
      losses                    INT UNSIGNED NOT NULL,
      draws                     INT UNSIGNED NOT NULL,
      
-     completion_rate           TINYINT UNSIGNED, -- 0-100
      play_time                 INT UNSIGNED NOT NULL, -- total seconds played on lichess
      lichess_tv_time           INT UNSIGNED NOT NULL, -- total seconds displayed on lichess tv
 

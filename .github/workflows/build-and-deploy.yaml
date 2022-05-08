@@ -1,4 +1,4 @@
-name: ChessWins.net
+name: lichess-stats.net
 on: push
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
         with:
           context: ./backend
           push: ${{ github.ref == 'refs/heads/master' }}
-          tags: ghcr.io/mureytasroc/chess-wins-net/backend:${{ github.sha }}
+          tags: ghcr.io/mureytasroc/lichess-stats/backend:${{ github.sha }}
 
   frontend-checks:
     name: Frontend Checks
@@ -99,7 +99,7 @@ jobs:
         with:
           context: frontend
           push: ${{ github.ref == 'refs/heads/master' }}
-          tags: ghcr.io/mureytasroc/pennbook/frontend:${{ github.sha }}
+          tags: ghcr.io/mureytasroc/lichess-stats/frontend:${{ github.sha }}
 
   deploy:
     name: Deploy latest version of code
@@ -123,11 +123,11 @@ jobs:
         run: >-
           cd helm
 
-          aws eks --region us-east-1 update-kubeconfig --name chesswinsnet-cluster
+          aws eks --region us-east-1 update-kubeconfig --name lichess-stats-cluster
 
           kubectl config set-context --current --namespace default
 
-          helm upgrade --install --atomic chesswinsnet ./chesswinsnet-chart --timeout 10m
+          helm upgrade --install --atomic lichess-stats ./lichess-stats-chart --timeout 10m
           --set application.secrets.dockerConfigJson=${{ secrets.DOCKER_CONFIG_JSON }}
           --set application.secrets.sentryUrl=${{ secrets.SENTRY_URL }}
           --set application.secrets.adminPassword=${{ secrets.ADMIN_PASSWORD }}

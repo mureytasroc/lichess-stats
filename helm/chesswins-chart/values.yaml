@@ -1,5 +1,5 @@
 application:
-  host: chesswins.net
+  host: lichess-stats.net
 
 jobs:
   - name: load-data
@@ -20,11 +20,11 @@ redis:
   replicas: 1
 
 backend:
-  image: ghcr.io/mureytasroc/pennbook/backend
+  image: ghcr.io/mureytasroc/lichess-stats/backend
   port: 8000
   replicas: 1
 
 frontend:
-  image: ghcr.io/mureytasroc/pennbook/frontend
+  image: ghcr.io/mureytasroc/lichess-stats/frontend
   port: 3000
   replicas: 1

@@ -2,10 +2,10 @@ ingress:
   enabled: true
   ingressClassName: nginx
   hosts:
-    - grafana.pennbook.app
+    - grafana.lichess-stats.net
   tls:
     - hosts:
-        - grafana.pennbook.app
+        - grafana.lichess-stats.net
       secretName: cloudflare-tls
 
 datasources:
