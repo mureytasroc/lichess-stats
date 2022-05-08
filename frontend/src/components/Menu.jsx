@@ -26,20 +26,6 @@ export default function MenuBar({ content, scroll }) {
       icon: <Icon component={RatingIcon} />,
     },
     {
-      key: "Profile",
-      label: "Profile",
-      children: [
-        ...content
-          .map(({ title, group }, index) => ({
-            key: index,
-            label: title,
-            group,
-          }))
-          .filter((e) => e.group === "Profile"),
-      ],
-      icon: <Icon component={WinnerIcon} />,
-    },
-    {
       key: "Game",
       label: "Game",
       children: [
@@ -52,6 +38,20 @@ export default function MenuBar({ content, scroll }) {
           .filter((e) => e.group === "Game"),
       ],
       icon: <Icon component={ClockIcon} />,
+    },
+    {
+      key: "Profile",
+      label: "Profile",
+      children: [
+        ...content
+          .map(({ title, group }, index) => ({
+            key: index,
+            label: title,
+            group,
+          }))
+          .filter((e) => e.group === "Profile"),
+      ],
+      icon: <Icon component={WinnerIcon} />,
     },
   ];
   const [openKeys, setOpenKeys] = useState([]);
