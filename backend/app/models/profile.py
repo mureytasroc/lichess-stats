@@ -61,6 +61,24 @@ class ResultPercentagesByTitle(BaseModel):
     titles: List[ResultPercentagesByTitleEntry] = Field(description="An array of title entries.")
 
 
+class ResultCountsByTitleEntry(TitleEntry):
+    win_count: Optional[int] = Field(
+        ge=0, description="The total number of wins by players with this title."
+    )
+    draw_count: Optional[int] = Field(
+        ge=0,
+        description="The total number of draws by players with this title.",
+    )
+    loss_count: Optional[int] = Field(
+        ge=0,
+        description="The total number of losses by players with this title.",
+    )
+
+
+class ResultCountsByTitle(BaseModel):
+    titles: List[ResultCountsByTitleEntry] = Field(description="An array of title entries.")
+
+
 class GameTerminationTypeByTitleEntryTerminationType(BaseModel):
     termination_type: TerminationType = Field(description="The termination type.")
     percentage: float = Field(

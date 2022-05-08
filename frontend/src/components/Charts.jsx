@@ -56,7 +56,6 @@ function TitleDistributionChart() {
           yField="title"
           seriesField="title"
           autoFit
-          yAxis={{ max: 30 }}
         />
       ) : (
         <>
@@ -215,7 +214,7 @@ function ResultPercentageDistributionChart() {
       );
     } else {
       const transformedData = unSlicedData
-        .sort((a, b) => b.win_percentage - a.winPercentage)
+        .sort((a, b) => b.win_percentage - a.win_percentage)
         .slice(slice, slice + 10)
         .flatMap(
           ({ country, win_percentage, loss_percentage, draw_percentage }) => [
@@ -273,8 +272,108 @@ function ResultPercentageDistributionChart() {
 }
 
 export const ResultPercentageDistribution = {
-  title: "Game Results",
+  title: "Game Results %",
   content: <ResultPercentageDistributionChart />,
+  group: "Profile",
+};
+
+function ResultCountDistributionChart() {
+  const [unSlicedData, setUnSlicedData] = useState([]);
+  const [slice, setSlice] = useState(0);
+  const [data, setData] = useState([]);
+  const [type, setType] = useState("title");
+
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/profile/${type}/results/counts`);
+      if (type === "title") {
+        setUnSlicedData(result.titles);
+      } else {
+        setUnSlicedData(result.countries);
+      }
+    })();
+  }, [type]);
+
+  useEffect(() => {
+    if (type === "title") {
+      const transformedData = unSlicedData
+        .filter(({ title }) => title)
+        .flatMap(({ title, win_count, loss_count, draw_count }) => [
+          {
+            title: title || NULL_NAME,
+            value: win_count,
+            type: "win count",
+          },
+          {
+            title: title || NULL_NAME,
+            value: loss_count,
+            type: "loss count",
+          },
+          {
+            title: title || NULL_NAME,
+            value: draw_count,
+            type: "draw count",
+          },
+        ]);
+      setData(transformedData.sort((a, b) => b.win_count - a.win_count));
+    } else {
+      const transformedData = unSlicedData
+        .sort((a, b) => b.win_count - a.win_count)
+        .slice(slice, slice + 10)
+        .flatMap(({ country, win_count, loss_count, draw_count }) => [
+          {
+            country,
+            value: win_count,
+            type: "win count",
+          },
+          {
+            country,
+            value: loss_count,
+            type: "loss count",
+          },
+          {
+            country,
+            value: draw_count,
+            type: "draw count",
+          },
+        ]);
+      setData(transformedData);
+    }
+  }, [unSlicedData, slice]);
+
+  return (
+    <>
+      <TitleCountrySelector handleChange={setType} />
+      {type === "title" ? (
+        <Bar
+          data={data}
+          isStack
+          xField="value"
+          yField="title"
+          seriesField="type"
+        />
+      ) : (
+        <>
+          <Bar
+            data={data}
+            isStack
+            xField="value"
+            yField="country"
+            seriesField="type"
+          />
+          <SlicerSelector
+            length={unSlicedData.length}
+            handleChange={setSlice}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
+export const ResultCountDistribution = {
+  title: "Game Result Counts",
+  content: <ResultCountDistributionChart />,
   group: "Profile",
 };
 
