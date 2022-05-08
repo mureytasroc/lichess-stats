@@ -48,7 +48,7 @@ async def castle(username: Optional[str] = None):
                         ),
                 total_games AS (SELECT username, COUNT(lichess_id) as total FROM
                 player_game GROUP BY username),
-                castleOnly AS (SELECT DISTINCT game_id FROM Moves
+                castleOnly AS (SELECT DISTINCT game_id FROM GameMove
                 WHERE move_notation IN ('O-O', 'O-O-O')),
                 game_moves_castle AS (SELECT username, COUNT(DISTINCT game_id) as castle FROM (
                 player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
@@ -66,7 +66,7 @@ async def castle(username: Optional[str] = None):
                         ),
                 total_games AS (SELECT username, COUNT(lichess_id) as total FROM
                 player_game GROUP BY username),
-                castleOnly AS (SELECT DISTINCT game_id FROM Moves
+                castleOnly AS (SELECT DISTINCT game_id FROM GameMove
                 WHERE move_notation IN ('O-O', 'O-O-O')),
                 game_moves_castle AS (SELECT username, COUNT(DISTINCT game_id) as castle FROM (
                 player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
@@ -101,7 +101,7 @@ async def ratio(username: Optional[str] = None):
                     UNION ALL SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.black_username
                     ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM Moves
+        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMoves
         WHERE move_notation IN ('O-O', 'O-O-O')),
         castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
         player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
@@ -124,7 +124,7 @@ async def ratio(username: Optional[str] = None):
                     UNION ALL SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.black_username
                     ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM Moves
+        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMoves
         WHERE move_notation IN ('O-O', 'O-O-O')),
         castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
         player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
