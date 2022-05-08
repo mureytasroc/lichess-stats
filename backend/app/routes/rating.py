@@ -121,19 +121,6 @@ async def play_time(
 
 
 @router.get(
-    "/{rating_type}/completion-rate",
-    description="Get the average cumulative completion rate, broken down by player rating (rating taken from player profile).",  # noqa: E501
-    response_model=PlayTimeByRating,
-)
-async def completion_rate(
-    rating_type: RatingType = Path(..., description="The rating type over which to bin."),
-    bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
-):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "completion_rate": 80.2}]}
-
-
-@router.get(
     "/{rating_type}/percent-patron",
     description="Get the percentage of players who are Lichess patrons, broken down by rating (rating taken from player profile).",  # noqa: E501
     response_model=PercentPatronByRating,
@@ -183,6 +170,29 @@ async def cumulative_result_percentages(
 
 
 @router.get(
+    "/{rating_type}/completion-rate",
+    description="Get the average cumulative completion rate, broken down by player rating (rating at the time of the game).",  # noqa: E501
+    response_model=PlayTimeByRating,
+)
+async def completion_rate(
+    game_type: GameType = Path(..., description="The game type to analyze."),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
+):
+    # TODO
+    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "completion_rate": 80.2}]}
+
+
+@router.get(
     "/{game_type}/result-percentages",
     description="Get the average win/draw/loss percentages broken down by color and player rating range (rating at the time of the game).",  # noqa: E501
     response_model=ResultPercentagesByRating,
@@ -191,13 +201,13 @@ async def result_percentages(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
@@ -233,13 +243,13 @@ async def result_percentages_2d(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(
         default=10, ge=1, description="Optionally, specify the rating bin size (for each color)."
@@ -273,13 +283,13 @@ async def game_length(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(
         default=10, ge=1, description="Optionally, specify the rating bin size (for each color)."
@@ -312,13 +322,13 @@ async def num_openings(
     ),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(
         default=100,
@@ -347,13 +357,13 @@ async def termination_type(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(
         default=10, ge=1, description="Optionally, specify the rating bin size (for each color)."
@@ -389,13 +399,13 @@ async def avg_accuracy(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
@@ -412,13 +422,13 @@ async def stddev_accuracy(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):

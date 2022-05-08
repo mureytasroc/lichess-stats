@@ -30,12 +30,14 @@ class TitleDistribution(BaseModel):
 
 class CompletionRateByTitleEntry(TitleEntry):
     avg_completion_rate: Optional[float] = Field(
-        ge=0, le=100, description="The average completion rate (0-100) of players with this title."
+        ge=0,
+        le=100,
+        description="The average game completion rate (0-100) of players with this title. A player is considered to have completed the game if they did not resign or abandon the game.",  # noqa: E501
     )
     stddev_completion_rate: Optional[float] = Field(
         ge=0,
         le=100,
-        description="The standard deviation of completion rates of players with this title.",
+        description="The standard deviation of game completion rates of players with this title.",
     )
 
 
@@ -99,7 +101,7 @@ class GameLengthByTitle(BaseModel):
 
 
 class CountryEntry(BaseModel):
-    country: str = Field(description="The player's country.")
+    country: Optional[str] = Field(description="The player's country.")
 
 
 class CountryDistributionEntry(CountryEntry):
@@ -110,12 +112,11 @@ class CountryDistribution(BaseModel):
     countries: List[CountryDistributionEntry] = Field(description="An array of country entries.")
 
 
-class CompletionRateByCountryEntry(BaseModel):
-    country: str = Field(description="The player's country.")
+class CompletionRateByCountryEntry(CountryEntry):
     avg_completion_rate: Optional[float] = Field(
         ge=0,
         le=100,
-        description="The average completion rate (0-100) of players from this country.",
+        description="The average completion rate (0-100) of players from this country. A player is considered to have completed the game if they did not resign or abandon the game.",  # noqa: E501
     )
     stddev_completion_rate: Optional[float] = Field(
         ge=0,

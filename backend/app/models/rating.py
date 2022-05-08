@@ -91,10 +91,15 @@ class PlayTimeByRating(BaseModel):
 
 
 class CompletionRateByRatingEntry(RatingBin):
-    completion_rate: float = Field(
+    avg_completion_rate: Optional[float] = Field(
         ge=0,
         le=100,
-        description="The average cumulative completion rate (0-100) for players in this rating bin.",  # noqa: E501
+        description="The average completion rate (0-100) of players in this rating bin. A player is considered to have completed a game if they did not resign or abandon the game.",  # noqa: E501
+    )
+    stddev_completion_rate: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The standard deviation of completion rates of players in this rating bin.",
     )
 
 

@@ -18,6 +18,25 @@ dict_cursor = get_dict_cursor(get_db_connection())
 
 
 @router.get(
+    "/date-distribution",
+    description="Get the distribution of game dates.",
+    response_model=DateDistribution,
+)
+async def title_distribution():
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            SELECT DATE_FORMAT(DATE(start_timestamp), '%Y-%m-%d') as start_date, COUNT(*) as count
+            FROM Game
+            GROUP BY DATE(start_timestamp)
+            """
+        )
+        result = cur.fetchall()
+    print(result)
+    return {"dates": result}
+
+
+@router.get(
     "/CastlingPercentage",
     description="Castling Percentage by player",
 )
