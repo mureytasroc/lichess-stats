@@ -26,7 +26,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: ./backend
-          push: ${{ github.ref == 'refs/heads/master' }}
+          push: ${{ github.ref == 'refs/heads/main' }}
           tags: ghcr.io/mureytasroc/lichess-stats/backend:${{ github.sha }}
 
   build-frontend:
@@ -53,12 +53,12 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: frontend
-          push: ${{ github.ref == 'refs/heads/master' }}
+          push: ${{ github.ref == 'refs/heads/main' }}
           tags: ghcr.io/mureytasroc/lichess-stats/frontend:${{ github.sha }}
 
   deploy:
     name: Deploy latest version of code
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     needs:
       - build-backend
       - build-frontend
