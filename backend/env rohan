@@ -1,5 +1,0 @@
-DB_HOST=chess-wins-net.czd39xjp3vxz.us-east-1.rds.amazonaws.com
-DB_USER=admin
-DB_PASSWORD=ZQXU!tQ2Xpip*.MDBJqAm.eKtiEkVDZYgXPhN-M
-DB_PORT=3306
-DB_NAME=CHESS_WINS_NET

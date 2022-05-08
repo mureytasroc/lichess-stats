@@ -65,7 +65,7 @@ class TerminationType(StrEnum):
     SeventyFiveMoveRule = auto()
     FivefoldRepetition = auto()
     FiftyMoveRule = auto()
-    ThreeFoldRepetition = auto()
+    ThreefoldRepetition = auto()
     RulesInfraction = auto()
 
 

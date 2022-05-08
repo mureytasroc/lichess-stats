@@ -206,9 +206,10 @@ async def termination_type_by_title(
 
     result = defaultdict(list)
     for r in flat_result:
+        print(r["termination"])
         result[r["title"]].append(
             {
-                "termination_type": r["termination_type"],
+                "termination_type": r["termination"],
                 "percentage": r["avg_percentage"],
             }
         )
