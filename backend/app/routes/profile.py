@@ -128,8 +128,8 @@ async def completion_rate_by_title(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 t.title as title,
@@ -225,8 +225,8 @@ async def termination_type_by_title(
                         OR %(termination_parity)s = 'draw' AND t.result = '1/2-1/2'
                     )
                     AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             ),
             ProfileGameCount as (
                 SELECT username, COUNT(*) as count FROM ProfileGame
@@ -311,8 +311,8 @@ async def game_length_by_title(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 title,
@@ -424,8 +424,8 @@ async def completion_rate_by_country(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 t.country as country,
@@ -521,8 +521,8 @@ async def termination_type_by_country(
                         OR %(termination_parity)s = 'draw' AND t.result = '1/2-1/2'
                     )
                     AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             ),
             ProfileGameCount as (
                 SELECT username, COUNT(*) as count FROM ProfileGame
@@ -553,7 +553,6 @@ async def termination_type_by_country(
 
     result = defaultdict(list)
     for r in flat_result:
-        print(r["termination"])
         result[r["country"]].append(
             {
                 "termination_type": r["termination"],
@@ -609,8 +608,8 @@ async def game_length_by_country(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 country,
@@ -626,5 +625,4 @@ async def game_length_by_country(
             },
         )
         result = cur.fetchall()
-
     return {"countries": result}

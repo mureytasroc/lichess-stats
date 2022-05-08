@@ -32,7 +32,6 @@ async def title_distribution():
             """
         )
         result = cur.fetchall()
-    print(result)
     return {"dates": result}
 
 
