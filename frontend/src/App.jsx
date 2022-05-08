@@ -15,6 +15,7 @@ function App() {
     Charts.TitleDistribution,
     Charts.CompletionRateDistribution,
     Charts.ResultPercentageDistribution,
+    Charts.ResultCountDistribution,
     Charts.GameTerminationDistribution,
     Charts.GameLengthDistribution,
     // Charts.CountryDistribution,

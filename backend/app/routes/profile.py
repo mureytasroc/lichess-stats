@@ -24,6 +24,7 @@ from app.models.profile import (
     ResultPercentagesByTitle,
     TitleDescription,
     TitleDistribution,
+    ResultCountsByTitle,
 )
 
 
@@ -78,6 +79,29 @@ async def result_percentages_by_title():
                 100 * AVG(losses / (wins+draws+losses)) as loss_percentage
             FROM Player
             GROUP BY title
+            """
+        )
+        result = cur.fetchall()
+    return {"titles": result}
+
+
+@router.get(
+    "/title/results/counts",
+    description="Get win/draw/loss counts by title.",
+    response_model=ResultCountsByTitle,
+)
+async def result_counts_by_title():
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                title,
+                SUM(wins) as win_count,
+                SUM(draws) as draw_count,
+                SUM(losses) as loss_count
+            FROM Player
+            GROUP BY title
+            ORDER BY -win_count
             """
         )
         result = cur.fetchall()
@@ -262,7 +286,6 @@ async def termination_type_by_title(
 
     result = defaultdict(list)
     for r in flat_result:
-        print(r["termination"])
         result[r["title"]].append(
             {
                 "termination_type": r["termination"],
