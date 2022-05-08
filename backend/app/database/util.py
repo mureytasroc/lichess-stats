@@ -370,3 +370,5 @@ def convert_to_float(ob):
         return [convert_to_float(el) for el in ob]
     elif isinstance(ob, dict):
         return {k: convert_to_float(v) for k, v in ob.items()}
+    else:
+        return ob
