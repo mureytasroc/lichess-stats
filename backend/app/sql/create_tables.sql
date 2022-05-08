@@ -104,7 +104,7 @@ CREATE INDEX game_black_username_idx ON Game(black_username); -- TODO: turn into
 CREATE TABLE IF NOT EXISTS GameMove
   (
      game_id                   CHAR(8),
-     ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
+     ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = (ply-1)//2+1, white move = odd ply)
      move_notation             VARCHAR(16) NOT NULL,
      
      PRIMARY KEY(game_id, ply),
@@ -115,10 +115,9 @@ CREATE TABLE IF NOT EXISTS GameMove
 CREATE TABLE IF NOT EXISTS Evaluation
   (
      game_id                   CHAR(8),
-     ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = ply//2, white move = odd ply)
-     eval                      DECIMAL(5, 2), -- null if missing or forced mate found
+     ply                       SMALLINT UNSIGNED NOT NULL, -- 1-indexed (move number = (ply-1)//2+1, white move = odd ply)
+     eval                      DECIMAL(5, 2), -- null if missing or forced mate found, otherwise centipawn/100
      mate_in                   TINYINT, -- number of PLIES to mate; negative for black, positive for white, null if no forced mate found
-     depth                     SMALLINT UNSIGNED, -- engine depth, if specified
      
      PRIMARY KEY(game_id, ply),
      FOREIGN KEY (game_id) REFERENCES Game(lichess_id)

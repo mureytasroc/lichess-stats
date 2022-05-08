@@ -2,7 +2,6 @@ REPLACE INTO Evaluation (
      game_id,
      ply,
      eval,
-     mate_in,
-     depth
+     mate_in
   )
-VALUES (%s, %s, %s, %s, %s);
+VALUES (%s, %s, %s, %s);

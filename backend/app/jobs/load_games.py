@@ -111,8 +111,8 @@ def get_existing_game_ids():
 
 existing_game_ids = get_existing_game_ids()
 
-id_re = re.compile(r"org/(.*)")
-tournament_id_re = re.compile(r"tournament/(.*)\"")
+id_re = re.compile(r"org/(.*)/?")
+tournament_id_re = re.compile(r"tournament/(.*)/?")
 
 allowed_eco = get_allowed_eco()
 
@@ -225,7 +225,7 @@ async def game_producer(game_file, game_queue):
         time_remaining = [
             (
                 lichess_id,
-                move.ply() // 2,
+                (move.ply() - 1) // 2 + 1,
                 round(move.clock() * 100),
                 move.next()
                 and move.next().clock() is not None
@@ -246,13 +246,7 @@ async def game_producer(game_file, game_queue):
                 continue
             score = score and Decimal(score) / Decimal(100)
             evaluation.append(
-                (
-                    lichess_id,
-                    move.ply(),
-                    score if forced_mate is not None else None,
-                    forced_mate,
-                    move.eval_depth(),
-                )
+                (lichess_id, move.ply(), score if forced_mate is None else None, forced_mate)
             )
 
         await game_queue.put((game_tup, moves, time_remaining, evaluation))

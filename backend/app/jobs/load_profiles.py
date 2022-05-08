@@ -121,9 +121,7 @@ def get_games_db_usernames():
     """
     with get_db_connection() as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT white_username FROM Player UNION SELECT black_username FROM PLAYER"
-            )
+            cursor.execute("SELECT white_username FROM Game UNION SELECT black_username FROM Game")
             game_usernames = {row[0] for row in cursor.fetchall()}
         connection.commit()
     return game_usernames
