@@ -4,16 +4,40 @@ import { Select, DatePicker, Slider, Input } from "antd";
 const { Option } = Select;
 const { Search } = Input;
 
-export function GameTypeSelector({ handleChange }) {
+export function GameTypeSelector({ handleChange, notAll }) {
   return (
-    <Select defaultValue="All" style={{ width: 120 }} onChange={handleChange}>
-      <Option value="All">All</Option>
+    <Select
+      defaultValue={notAll ? "Bullet" : "All"}
+      style={{ width: 120 }}
+      onChange={handleChange}
+    >
+      {!notAll && <Option value="All">All</Option>}
       <Option value="UltraBullet">UltraBullet</Option>
       <Option value="Bullet">Bullet</Option>
       <Option value="Blitz">Blitz</Option>
       <Option value="Rapid">Rapid</Option>
       <Option value="Classical">Classical</Option>
       <Option value="Correspondence">Correspondence</Option>
+    </Select>
+  );
+}
+
+export function RatingTypeSelector({ handleChange }) {
+  return (
+    <Select
+      defaultValue="Bullet"
+      style={{ width: 120 }}
+      onChange={handleChange}
+    >
+      <Option value="UltraBullet">UltraBullet</Option>
+      <Option value="Bullet">Bullet</Option>
+      <Option value="Blitz">Blitz</Option>
+      <Option value="Rapid">Rapid</Option>
+      <Option value="Classical">Classical</Option>
+      <Option value="Correspondence">Correspondence</Option>
+      <Option value="FIDE">FIDE</Option>
+      <Option value="USCF">USCF</Option>
+      <Option value="ECF">ECF</Option>
     </Select>
   );
 }

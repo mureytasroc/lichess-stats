@@ -18,7 +18,7 @@ class RatingType(StrEnum):
     Bullet = auto()
     Blitz = auto()
     Rapid = auto()
-    Classsical = auto()
+    Classical = auto()
     Correspondence = auto()
     FIDE = auto()
     USCF = auto()

@@ -12,6 +12,16 @@ const { Content, Sider } = Layout;
 
 function App() {
   const content = [
+    Charts.RatingDistribution,
+    Charts.RatingCompareDistribution,
+    Charts.TitleByRatingDistribution,
+    Charts.RatingByCountryDistribution,
+    Charts.PlayTimeByRatingDistribution,
+    Charts.PatronsByRatingDistribution,
+    Charts.TOSViolatorsByRatingDistribution,
+    Charts.CumulativeResultByRatingDistribution,
+    Charts.NumOpeningByRatingDistribution,
+    Charts.ResultPercentageTwoDimDistribution,
     Charts.GameTimeDistribution,
     Charts.CastlingPercentage,
     Charts.CastlingTypePercentage,

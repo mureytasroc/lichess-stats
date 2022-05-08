@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
 import { Statistic } from "antd";
-import { Bar, Line } from "@ant-design/plots";
+import { Bar, Line, Column, Heatmap } from "@ant-design/plots";
 import { doApiRequest } from "../utils/fetch";
 import {
   GameTypeSelector,
@@ -8,6 +9,7 @@ import {
   TitleCountrySelector,
   SlicerSelector,
   UsernameSelector,
+  RatingTypeSelector,
 } from "../utils/selectors";
 
 const NULL_NAME = "no title";
@@ -696,4 +698,403 @@ export const TimeToWin = {
   title: "Average Time to Win",
   content: <TimeToWinChart />,
   group: "Game",
+};
+
+function RatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/rating/${ratingType}/distribution`, {
+        bin_size: 100,
+      });
+      setData(result.bins);
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column data={data} xField="rating_max" yField="count" autoFit />
+    </>
+  );
+}
+
+export const RatingDistribution = {
+  title: "Rating Distribution",
+  content: <RatingDistributionChart />,
+  group: "Rating",
+};
+
+function RatingCompareDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/rating/${ratingType}/compare`, {
+        bin_size: 300,
+      });
+      setData(
+        result.bins.flatMap(
+          ({
+            rating_max,
+            ultrabullet_rating,
+            bullet_rating,
+            blitz_rating,
+            rapid_rating,
+            classical_rating,
+            correspondence_rating,
+            fide_rating,
+            uscf_rating,
+            ecf_rating,
+          }) => [
+            {
+              name: "ultrabullet",
+              value: ultrabullet_rating,
+              rating: rating_max,
+            },
+            {
+              name: "bullet",
+              value: bullet_rating,
+              rating: rating_max,
+            },
+            {
+              name: "blitz",
+              value: blitz_rating,
+              rating: rating_max,
+            },
+            {
+              name: "rapid",
+              value: rapid_rating,
+              rating: rating_max,
+            },
+            {
+              name: "classical",
+              value: classical_rating,
+              rating: rating_max,
+            },
+            {
+              name: "correspondence",
+              value: correspondence_rating,
+              rating: rating_max,
+            },
+            {
+              name: "fide",
+              value: fide_rating,
+              rating: rating_max,
+            },
+            {
+              name: "ecf",
+              value: ecf_rating,
+              rating: rating_max,
+            },
+            {
+              name: "uscf",
+              value: uscf_rating,
+              rating: rating_max,
+            },
+          ]
+        )
+      );
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column
+        data={data}
+        isGroup
+        xField="rating"
+        yField="value"
+        seriesField="name"
+        autoFit
+      />
+    </>
+  );
+}
+
+export const RatingCompareDistribution = {
+  title: "Compare Rating",
+  content: <RatingCompareDistributionChart />,
+  group: "Rating",
+};
+
+function TitleByRatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/rating/${ratingType}/title`);
+      setData(result.titles.sort((a, b) => b.avg_rating - a.avg_rating));
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column data={data} xField="title" yField="avg_rating" autoFit />
+    </>
+  );
+}
+
+export const TitleByRatingDistribution = {
+  title: "Rating by Title",
+  content: <TitleByRatingDistributionChart />,
+  group: "Rating",
+};
+
+function RatingByCountryDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/rating/${ratingType}/country`);
+      setData(result.countries.sort((a, b) => b.avg_rating - a.avg_rating));
+    })();
+  }, [ratingType]);
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column
+        data={data}
+        xField="country"
+        yField="avg_rating"
+        autoFit
+        scrollbar={{
+          type: "horizontal",
+        }}
+      />
+    </>
+  );
+}
+
+export const RatingByCountryDistribution = {
+  title: "Rating by Country",
+  content: <RatingByCountryDistributionChart />,
+  group: "Rating",
+};
+
+function PlayTimeByRatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/rating/${ratingType}/play-time`, {
+        bin_size: 100,
+      });
+      setData(result.bins);
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column data={data} xField="rating_max" yField="avg_play_time" autoFit />
+    </>
+  );
+}
+
+export const PlayTimeByRatingDistribution = {
+  title: "Play Times",
+  content: <PlayTimeByRatingDistributionChart />,
+  group: "Rating",
+};
+
+function PatronsByRatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(
+        `/rating/${ratingType}/percent-patron`,
+        {
+          bin_size: 100,
+        }
+      );
+      setData(result.bins);
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column data={data} xField="rating_max" yField="percent_patron" autoFit />
+    </>
+  );
+}
+
+export const PatronsByRatingDistribution = {
+  title: "Lichess Patrons",
+  content: <PatronsByRatingDistributionChart />,
+  group: "Rating",
+};
+
+function TOSViolatorsByRatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(
+        `/rating/${ratingType}/percent-tos-violators`,
+        {
+          bin_size: 100,
+        }
+      );
+      setData(result.bins);
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column
+        data={data}
+        xField="rating_max"
+        yField="percent_tos_violators"
+        autoFit
+      />
+    </>
+  );
+}
+
+export const TOSViolatorsByRatingDistribution = {
+  title: "TOS Violators",
+  content: <TOSViolatorsByRatingDistributionChart />,
+  group: "Rating",
+};
+
+function CumulativeResultByRatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(
+        `/rating/${ratingType}/cumulative-result-percentages`,
+        {
+          bin_size: 100,
+        }
+      );
+      setData(
+        result.bins.flatMap(
+          ({
+            rating_max,
+            win_percentage,
+            loss_percentage,
+            draw_percentage,
+          }) => [
+            {
+              name: rating_max,
+              value: loss_percentage,
+              type: "win",
+            },
+            {
+              name: rating_max,
+              value: loss_percentage,
+              type: "loss",
+            },
+            {
+              name: rating_max,
+              value: draw_percentage,
+              type: "draw",
+            },
+            {
+              name: rating_max,
+              value: win_percentage,
+              type: "win",
+            },
+          ]
+        )
+      );
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column
+        data={data}
+        isPercent
+        isStack
+        xField="name"
+        yField="value"
+        seriesField="type"
+        autoFit
+      />
+    </>
+  );
+}
+
+export const CumulativeResultByRatingDistribution = {
+  title: "Cumulative Results",
+  content: <CumulativeResultByRatingDistributionChart />,
+  group: "Rating",
+};
+
+function ResultPercentageTwoDimDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(
+        `/rating/${ratingType}/result-percentages-2d`,
+        {
+          bin_size: 100,
+        }
+      );
+      setData(
+        result.bins.map(
+          ({ white_rating_max, black_rating_max, white_win_percentage }) => ({
+            white: white_rating_max.toString(),
+            black: black_rating_max.toString(),
+            white_win_percentage,
+          })
+        )
+      );
+    })();
+  }, [ratingType]);
+  const config = {
+    data,
+    xField: "white",
+    yField: "black",
+    colorField: "white_win_percentage",
+  };
+  return (
+    <>
+      <GameTypeSelector handleChange={setRatingType} notAll />
+      <Heatmap {...config} />
+    </>
+  );
+}
+
+export const ResultPercentageTwoDimDistribution = {
+  title: "Result Heat Map",
+  content: <ResultPercentageTwoDimDistributionChart />,
+  group: "Rating",
+};
+
+function NumOpeningByRatingDistributionChart() {
+  const [ratingType, setRatingType] = useState("Bullet");
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/rating/${ratingType}/num-openings`, {
+        bin_size: 100,
+      });
+      setData(result.bins);
+    })();
+  }, [ratingType]);
+
+  return (
+    <>
+      <RatingTypeSelector handleChange={setRatingType} />
+      <Column data={data} xField="rating_max" yField="num_openings" autoFit />
+    </>
+  );
+}
+
+export const NumOpeningByRatingDistribution = {
+  title: "Opening Count",
+  content: <NumOpeningByRatingDistributionChart />,
+  group: "Rating",
 };
