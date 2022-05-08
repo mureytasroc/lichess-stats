@@ -2,6 +2,8 @@ import argparse
 import asyncio
 import re
 import selectors
+from decimal import Decimal
+from math import ceil
 
 import chess.pgn
 from tqdm import tqdm
@@ -11,8 +13,6 @@ from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
 from app.load_data_helpers.util import get_allowed_eco
 from app.sql.statements import upsert_evaluation, upsert_game, upsert_move, upsert_time_remaining
-from decimal import Decimal
-from math import ceil
 
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")

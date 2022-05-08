@@ -1,8 +1,9 @@
+from contextlib import contextmanager
+
 import aiomysql
 import pymysql
 
 from app.config import settings
-from contextlib import contextmanager, asynccontextmanager
 
 
 def get_db_connection():

@@ -1,6 +1,8 @@
 import re
+
 import chess.pgn
 import pymysql
+
 
 # TODO: Make stuff async
 

@@ -8,7 +8,6 @@ import aiohttp
 from tqdm import tqdm
 
 from app.database.connect import get_async_db_pool, get_db_connection
-from app.load_data_helpers.get_games_files import get_games_files
 from app.sql.statements import upsert_player
 
 
