@@ -86,6 +86,11 @@ jobs:
           --set application.secrets.dockerConfigJson=${{ secrets.DOCKER_CONFIG_JSON }}
           --set application.secrets.sentryUrl=${{ secrets.SENTRY_URL }}
           --set application.secrets.adminPassword=${{ secrets.ADMIN_PASSWORD }}
+          --set application.secrets.DB_HOST=${{ secrets.DB_HOST }}
+          --set application.secrets.DB_USER=${{ secrets.DB_USER }}
+          --set application.secrets.DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          --set application.secrets.DB_PORT=${{ secrets.DB_PORT }}
+          --set application.secrets.DB_NAME=${{ secrets.DB_NAME }}
           --set application.gitSHA=${{ github.sha }}
 
           helm upgrade --install --atomic ingress-nginx ingress-nginx
