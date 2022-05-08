@@ -1,5 +1,5 @@
 application:
-  host: lichess-stats.net
+  host: lichess-stats.org
 
 # jobs:
 #   - name: load-data
