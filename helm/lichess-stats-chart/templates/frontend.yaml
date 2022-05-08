@@ -17,7 +17,7 @@ spec:
                 - name: {{ .Release.Name }}-frontend
                   image: '{{ .Values.frontend.image }}:{{ .Values.application.gitSHA }}'
                   ports:
-                      - containerPort: 4000
+                      - containerPort: 3000
                       
             imagePullSecrets:
                 - name: {{ .Release.Name }}-dockerconfigjson-github-com
@@ -31,4 +31,4 @@ spec:
         app: {{ .Release.Name }}-frontend
     ports:
         - port: {{ .Values.frontend.port }}
-          targetPort: 4000
+          targetPort: 3000

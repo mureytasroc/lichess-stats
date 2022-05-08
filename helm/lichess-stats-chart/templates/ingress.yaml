@@ -21,6 +21,13 @@ spec:
                 name: {{ .Release.Name }}-backend
                 port:
                   number: {{ .Values.backend.port }}
+          - path: "/api.json"
+            pathType: Exact
+            backend:
+              service:
+                name: {{ .Release.Name }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
   tls:
     - hosts:
         - {{ .Values.application.host }}

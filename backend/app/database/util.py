@@ -1,5 +1,6 @@
 from enum import auto
 from typing import List
+from decimal import Decimal
 
 from fastapi_utils.enums import StrEnum
 
@@ -360,3 +361,14 @@ country_codes = {
 
 def convert_country_codes(results: List):
     return [{**r, "country": country_codes.get(r["country"], r["country"])} for r in results]
+
+
+def convert_to_float(ob):
+    if isinstance(ob, Decimal):
+        return float(ob)
+    elif isinstance(ob, list):
+        return [convert_to_float(el) for el in ob]
+    elif isinstance(ob, dict):
+        return {k: convert_to_float(v) for k, v in ob.items()}
+    else:
+        return ob

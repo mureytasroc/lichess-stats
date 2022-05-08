@@ -8,7 +8,7 @@ from fastapi import APIRouter, Path, Query
 from fastapi_redis_cache import cache
 
 from app.database.connect import get_db_connection, get_dict_cursor
-from app.database.util import GameType
+from app.database.util import GameType, convert_to_float
 from app.models.games import CastlingPercentage, DateDistribution
 
 
@@ -33,7 +33,7 @@ async def date_distribution():
             """
         )
         result = cur.fetchall()
-    return {"dates": result}
+    return {"dates": convert_to_float(result)}
 
 
 @router.get(
@@ -108,7 +108,7 @@ async def castling_percentage(
         )
         result = curr.fetchall()
 
-        return {"players": result}
+        return {"players": convert_to_float(result)}
 
 
 @router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
@@ -172,7 +172,7 @@ async def ratio(username: Optional[str] = None):
                     "username": r["username"],
                     "RatioKtoQ": r["ratio"],
                 }
-                for r in result
+                for r in convert_to_float(result)
             ],
         }
 
@@ -235,6 +235,6 @@ async def avgTime(username: Optional[str] = None):
                     "username": r["username"],
                     "avgTime": r["avgTime"],
                 }
-                for r in result
+                for r in convert_to_float(result)
             ],
         }
