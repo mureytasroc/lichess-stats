@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Optional
 
 from fastapi import APIRouter, Path, Query
+from fastapi_redis_cache import cache
 
 from app.database.connect import get_db_connection, get_dict_cursor
 from app.database.util import GameType, RatingType, TerminationParity, get_rating_col
@@ -34,6 +35,7 @@ dict_cursor = get_dict_cursor(get_db_connection())
     description="Get the distribution of player ratings (rating taken from player profile).",
     response_model=RatingDistribution,
 )
+@cache()
 async def distribution(
     rating_type: RatingType = Path(..., description="The rating type."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
@@ -62,6 +64,7 @@ async def distribution(
     description="Get the average rating (for each game type), broken down by rating in a specific game type (ratings taken from player profile).",  # noqa: E501
     response_model=RatingByRating,
 )
+@cache()
 async def compare(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
@@ -98,6 +101,7 @@ async def compare(
     description="Get statistics on player ratings by title.",  # noqa: E501
     response_model=RatingByTitle,
 )
+@cache()
 async def title(
     rating_type: RatingType = Path(..., description="The rating type to analyze."),
 ):
@@ -122,6 +126,7 @@ async def title(
     description="Get statistics on player ratings by country.",  # noqa: E501
     response_model=RatingByCountry,
 )
+@cache()
 async def country(
     rating_type: RatingType = Path(..., description="The rating type to analyze."),
 ):
@@ -146,6 +151,7 @@ async def country(
     description="Get the average total play time (in seconds), broken down by player rating (rating taken from player profile).",  # noqa: E501
     response_model=PlayTimeByRating,
 )
+@cache()
 async def play_time(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
@@ -175,6 +181,7 @@ async def play_time(
     description="Get the percentage of players who are Lichess patrons, broken down by rating (rating taken from player profile).",  # noqa: E501
     response_model=PercentPatronByRating,
 )
+@cache()
 async def percent_patron(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
@@ -203,6 +210,7 @@ async def percent_patron(
     description="Get the percentage of players who have violated TOS, broken down by rating (rating taken from player profile).",  # noqa: E501
     response_model=PercentTOSViolatorsByRating,
 )
+@cache()
 async def percent_tos_violators(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
@@ -231,6 +239,7 @@ async def percent_tos_violators(
     description="Get the average cumulative win/draw/loss percentages by player rating range (rating taken from player profile).",  # noqa: E501
     response_model=CumulativeResultPercentagesByRating,
 )
+@cache()
 async def cumulative_result_percentages(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
@@ -261,6 +270,7 @@ async def cumulative_result_percentages(
     description="Get the average cumulative completion rate, broken down by player rating (rating at the time of the game).",  # noqa: E501
     response_model=CompletionRateByRating,
 )
+@cache()
 async def completion_rate(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
@@ -330,6 +340,7 @@ async def completion_rate(
     description="Get the average castling rate, broken down by player rating (rating at the time of the game).",  # noqa: E501
     response_model=CastlingRateByRating,
 )
+@cache()
 async def castling_percentage(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
@@ -409,6 +420,7 @@ async def castling_percentage(
     description="Get the average win/draw/loss percentages broken down by color and player rating range (rating at the time of the game).",  # noqa: E501
     response_model=ResultPercentagesByRating,
 )
+@cache()
 async def result_percentages(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
@@ -486,6 +498,7 @@ async def result_percentages(
     description="Get the average win/draw/loss percentages broken down by white rating and black rating (rating at the time of the game).",  # noqa: E501
     response_model=ResultPercentagesByRating2D,
 )
+@cache()
 async def result_percentages_2d(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
@@ -540,6 +553,7 @@ async def result_percentages_2d(
     description="Get the average game length (number of moves) broken down by player rating (rating at the time of the game).",  # noqa: E501
     response_model=GameLengthByRating,
 )
+@cache()
 async def game_length(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
@@ -604,6 +618,7 @@ async def game_length(
     description="Get the average number of distinct openings per player broken down by player rating (rating at the time of the game).",  # noqa: E501
     response_model=NumOpeningsByRating,
 )
+@cache()
 async def num_openings(
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
@@ -681,6 +696,7 @@ async def num_openings(
     description="Get game termination type percentages broken down by player rating (rating at the time of the game).",  # noqa: E501
     response_model=GameTerminationTypeByRating,
 )
+@cache()
 async def termination_type(
     termination_parity: Optional[TerminationParity] = Query(
         default=None,

@@ -26,6 +26,7 @@ from app.models.profile import (
     TitleDistribution,
     ResultCountsByTitle,
 )
+from fastapi_redis_cache import cache
 
 
 router = APIRouter()
@@ -41,6 +42,7 @@ dict_cursor = get_dict_cursor(get_db_connection())
     description="Get an array of title descriptions.",
     response_model=TitleDescription,
 )
+@cache()
 async def title_description():
     return {"titles": [{"title": k, "description": v} for k, v in title_to_desc.items()]}
 
@@ -50,6 +52,7 @@ async def title_description():
     description="Get the distribution of players by title.",
     response_model=TitleDistribution,
 )
+@cache()
 async def title_distribution():
     with dict_cursor() as cur:
         cur.execute(
@@ -68,6 +71,7 @@ async def title_distribution():
     description="Get win/draw/loss percentages by title.",
     response_model=ResultPercentagesByTitle,
 )
+@cache()
 async def result_percentages_by_title():
     with dict_cursor() as cur:
         cur.execute(
@@ -90,6 +94,7 @@ async def result_percentages_by_title():
     description="Get win/draw/loss counts by title.",
     response_model=ResultCountsByTitle,
 )
+@cache()
 async def result_counts_by_title():
     with dict_cursor() as cur:
         cur.execute(
@@ -113,6 +118,7 @@ async def result_counts_by_title():
     description="Get statistics on game completion rate by title.",
     response_model=CompletionRateByTitle,
 )
+@cache()
 async def completion_rate_by_title(
     game_type: Optional[GameType] = Query(
         default=None, description="Optionally, specify a game type to analyze."
@@ -194,6 +200,7 @@ async def completion_rate_by_title(
     description="Get game termination type percentages by title.",
     response_model=GameTerminationTypeByTitle,
 )
+@cache()
 async def termination_type_by_title(
     termination_parity: Optional[TerminationParity] = Query(
         default=None,
@@ -303,6 +310,7 @@ async def termination_type_by_title(
     description="Get statistics on game length (number of moves) by title.",
     response_model=GameLengthByTitle,
 )
+@cache()
 async def game_length_by_title(
     game_type: Optional[GameType] = Query(
         default=None, description="Optionally, specify a game type to analyze."
@@ -368,6 +376,7 @@ async def game_length_by_title(
     description="Get the distribution of players by country.",
     response_model=CountryDistribution,
 )
+@cache()
 async def country_distribution():
     with dict_cursor() as cur:
         cur.execute(
@@ -386,6 +395,7 @@ async def country_distribution():
     description="Get win/draw/loss percentages by country.",
     response_model=ResultPercentagesByCountry,
 )
+@cache()
 async def result_percentages_by_country():
     with dict_cursor() as cur:
         cur.execute(
@@ -409,6 +419,7 @@ async def result_percentages_by_country():
     description="Get win/draw/loss counts by country.",
     response_model=ResultCountsByCountry,
 )
+@cache()
 async def result_counts_by_country():
     with dict_cursor() as cur:
         cur.execute(
@@ -432,6 +443,7 @@ async def result_counts_by_country():
     description="Get statistics on player ratings by country.",
     response_model=CompletionRateByCountry,
 )
+@cache()
 async def completion_rate_by_country(
     game_type: Optional[GameType] = Query(
         default=None, description="Optionally, specify a game type to analyze."
@@ -513,6 +525,7 @@ async def completion_rate_by_country(
     description="Get game termination type percentages by country.",
     response_model=GameTerminationTypeByCountry,
 )
+@cache()
 async def termination_type_by_country(
     termination_parity: Optional[TerminationParity] = Query(
         default=None,
@@ -625,6 +638,7 @@ async def termination_type_by_country(
     description="Get statistics on game length (number of moves) by country.",  # noqa: E501
     response_model=GameLengthByCountry,
 )
+@cache()
 async def game_length_by_country(
     game_type: Optional[GameType] = Query(
         default=None, description="Optionally, specify a game type to analyze."

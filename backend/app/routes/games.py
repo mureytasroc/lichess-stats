@@ -5,6 +5,7 @@ from typing import Optional
 
 import pymysql.cursors
 from fastapi import APIRouter, Path, Query
+from fastapi_redis_cache import cache
 
 from app.database.connect import get_db_connection, get_dict_cursor
 from app.database.util import GameType
@@ -21,6 +22,7 @@ dict_cursor = get_dict_cursor(get_db_connection())
     description="Get the distribution of game dates.",
     response_model=DateDistribution,
 )
+@cache()
 async def date_distribution():
     with dict_cursor() as cur:
         cur.execute(
@@ -39,6 +41,7 @@ async def date_distribution():
     description="Get the castling percentage by player",
     response_model=CastlingPercentage,
 )
+@cache()
 async def castling_percentage(
     username: Optional[str] = Query(
         default=None,
@@ -109,6 +112,7 @@ async def castling_percentage(
 
 
 @router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
+@cache()
 async def ratio(username: Optional[str] = None):
     with dict_cursor() as curr:
         if not username:
@@ -174,6 +178,7 @@ async def ratio(username: Optional[str] = None):
 
 
 @router.get("/AvgTimeToWin", description="Average Time Taken for a Player to Win")
+@cache()
 async def avgTime(username: Optional[str] = None):
     with dict_cursor() as curr:
         if not username:
