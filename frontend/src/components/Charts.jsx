@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Bar } from "@ant-design/plots";
 import { doApiRequest } from "../utils/fetch";
+import { GameTypeSelector, MonthYearSelector } from "../utils/selectors";
+
+const NULL_NAME = "no title";
 
 function TitleDistributionChart() {
   const [data, setData] = useState([]);
@@ -13,15 +16,7 @@ function TitleDistributionChart() {
     })();
   }, []);
 
-  return (
-    <Bar
-      data={data}
-      xField="count"
-      yField="title"
-      seriesField="title"
-      autoFit
-    />
-  );
+  return <Bar data={data} xField="count" yField="title" seriesField="title" />;
 }
 
 export const TitleDistribution = {
@@ -69,17 +64,17 @@ function ResultPercentageDistributionChart() {
       const transformedData = result.titles.flatMap(
         ({ title, win_percentage, loss_percentage, draw_percentage }) => [
           {
-            title: title || "no title",
+            title: title || NULL_NAME,
             value: win_percentage,
             type: "win percentage",
           },
           {
-            title: title || "no title",
+            title: title || NULL_NAME,
             value: loss_percentage,
             type: "loss percentage",
           },
           {
-            title: title || "no title",
+            title: title || NULL_NAME,
             value: draw_percentage,
             type: "draw percentage",
           },
@@ -106,5 +101,59 @@ function ResultPercentageDistributionChart() {
 export const ResultPercentageDistribution = {
   title: "Result Distribution",
   content: <ResultPercentageDistributionChart />,
+  group: "Profile",
+};
+
+function GameTerminationDistributionChart() {
+  const [data, setData] = useState([]);
+  const [gameType, setGameType] = useState("All");
+  const [startDay, setStartDay] = useState();
+  const [endDay, setEndDay] = useState();
+
+  useEffect(() => {
+    (async () => {
+      const params = {};
+      if (gameType !== "All") params.game_type = gameType;
+      if (startDay && startDay.length > 0) params.start_date = startDay;
+      if (endDay && endDay.length > 0) params.end_date = endDay;
+
+      const result = await doApiRequest(
+        "/profile/title/termination-type",
+        params
+      );
+      const transformedData = result.titles.flatMap(
+        ({ title, termination_types }) =>
+          termination_types.map((entry) => ({
+            title: title || NULL_NAME,
+            ...entry,
+          }))
+      );
+      setData(transformedData);
+    })();
+  }, [gameType, startDay]);
+
+  return (
+    <>
+      <div style={{ display: "flex" }}>
+        <GameTypeSelector handleChange={setGameType} />
+        {/* <MonthYearSelector handleChange={setStartDay} />
+        <MonthYearSelector handleChange={setEndDay} /> */}
+      </div>
+      <br />
+      <Bar
+        data={data}
+        isStack
+        isPercent
+        xField="percentage"
+        yField="title"
+        seriesField="termination_type"
+      />
+    </>
+  );
+}
+
+export const GameTerminationDistribution = {
+  title: "Game Terminations",
+  content: <GameTerminationDistributionChart />,
   group: "Profile",
 };

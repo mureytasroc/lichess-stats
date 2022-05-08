@@ -8,7 +8,7 @@ export function getApiUrl(path) {
   return API_BASE_URL + path;
 }
 
-export function doApiRequest(path, data) {
+export function doApiRequest(path, params, data) {
   let formattedData = data;
   if (!formattedData) {
     formattedData = {};
@@ -25,7 +25,7 @@ export function doApiRequest(path, data) {
   if (formattedData.body && !(formattedData.body instanceof FormData)) {
     formattedData.body = JSON.stringify(formattedData.body);
   }
-  return fetch(getApiUrl(path), formattedData).then((response) =>
-    response.json()
-  );
+  const url =
+    getApiUrl(path) + (params !== {} ? "?" : "") + new URLSearchParams(params);
+  return fetch(url, formattedData).then((response) => response.json());
 }

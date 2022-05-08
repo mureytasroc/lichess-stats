@@ -13,7 +13,9 @@ const { Content, Sider } = Layout;
 function App() {
   const content = [
     Charts.TitleDistribution,
+    // Charts.CompletionRateDistribution,
     Charts.ResultPercentageDistribution,
+    Charts.GameTerminationDistribution,
   ];
   const [collapse, setCollapse] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
