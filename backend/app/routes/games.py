@@ -41,7 +41,7 @@ async def castle(username: Optional[str] = None):
             game_moves_castle AS (SELECT username, COUNT(DISTINCT game_id) as castle FROM (
             player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
             ) GROUP BY username)
-            SELECT total_games.username, castle*100/(total) as "Castling Percentage"  FROM (
+            SELECT total_games.username, castle*100/(total) as Castling_Percentage  FROM (
             game_moves_castle JOIN total_games ON game_moves_castle.username = total_games.username
             );'''
     else:
@@ -58,16 +58,22 @@ async def castle(username: Optional[str] = None):
             game_moves_castle AS (SELECT username, COUNT(DISTINCT game_id) as castle FROM (
             player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
             ) GROUP BY username)
-            SELECT total_games.username, castle*100/(total) as "Castling Percentage"  FROM (
+            SELECT total_games.username, castle*100/(total) as Castling_Percentage  FROM (
             game_moves_castle JOIN total_games ON game_moves_castle.username = total_games.username
             ) WHERE total_games.username = \'''' + username + "\' ; "
     
-    print(sql)
     curr.execute(sql)
     result = curr.fetchall()
-    print(result)
-    #print(sql)
-    return {JSONResponse(content=jsonable_encoder(result))}
+
+    return {
+        "players": [
+            {
+                "username": r["username"],
+                "CastlingPercentage": r["Castling_Percentage"],
+            }
+            for r in result
+        ],
+    }
 
 @router.get(
     "/RatioKtoQ",
@@ -93,7 +99,7 @@ async def ratio(username: Optional[str] = None):
     ) WHERE move_notation  = 'O-O-O'
   GROUP BY username
       HAVING queen > 0)
-     SELECT castle_king.username, king/queen as "Ratio of King to Queen Castling"  FROM (
+     SELECT castle_king.username, king/queen as ratio FROM (
      castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
     );'''
     else:
@@ -115,15 +121,23 @@ async def ratio(username: Optional[str] = None):
     ) WHERE move_notation  = 'O-O-O'
   GROUP BY username
       HAVING queen > 0)
-     SELECT castle_king.username, king/queen as "Ratio of King to Queen Castling"  FROM (
+     SELECT castle_king.username, king/queen as ratio  FROM (
      castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
     ) WHERE castle_king.username = \'''' + username + "\' ; "
     
-    print(sql)
+
     curr.execute(sql)
     result = curr.fetchall()
-    print(result)
-    return {JSONResponse(content=jsonable_encoder(result))}
+
+    return {
+        "players": [
+            {
+                "username": r["username"],
+                "RatioKtoQ": r["ratio"],
+            }
+            for r in result
+        ],
+    }
 
 
 @router.get(
@@ -137,12 +151,18 @@ async def win_percent():
 WHERE Country is not NULL
 GROUP BY Country
 ORDER BY Win_Percentage DESC;'''
-    print(sql)
     curr.execute(sql)
     result = curr.fetchall()
-    print(result)
-    #print(sql)
-    return {JSONResponse(content=jsonable_encoder(result))}
+    return {
+        "countries": [
+            {
+                "country": r["Country"],
+                "win_percent": r["Win_Percentage"],
+            }
+            for r in result
+        ],
+    }
+    
 
 
 @router.get(
@@ -156,31 +176,23 @@ async def total_wins():
 WHERE Country is not NULL
 GROUP BY Country
 ORDER BY Total_Games DESC;'''
-    print(sql)
+   
     curr.execute(sql)
     result = curr.fetchall()
-    print(result)
-    #print(sql)
-    return {JSONResponse(content=jsonable_encoder(result))}
+   
+    return {
+        "countries": [
+            {
+                "country": r["Country"],
+                "total_games": r["Total_Games"],
+            }
+            for r in result
+        ],
+    }
 
 
-router.get(
-    "/totalWins",
-    description="Descending order of Country Win Percentages",  # noqa: E,
-)
 
-async def total_wins():
-    curr = connection.cursor()
-    sql = '''SELECT Country, SUM(num_games) as Total_Games FROM Player
-WHERE Country is not NULL
-GROUP BY Country
-ORDER BY Total_Games DESC;'''
-    print(sql)
-    curr.execute(sql)
-    result = curr.fetchall()
-    print(result)
-    #print(sql)
-    return {JSONResponse(content=jsonable_encoder(result))}
+
 
 
 
@@ -207,7 +219,7 @@ async def avgTime(username: Optional[str] = None):
          GROUP BY username, game_id
        ),
   time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
-SELECT username, AVG(time) as "Average Time to Win"
+SELECT username, AVG(time) as avgTime
 FROM time_union
 GROUP BY username;'''
     else:
@@ -228,10 +240,19 @@ GROUP BY username;'''
          GROUP BY username, game_id
        ),
   time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
-SELECT username, AVG(time) as "Average Time to Win"
+SELECT username, AVG(time) as avgTime
 FROM time_union
 WHERE username = \'''' + username + "\' ; "
     
     curr.execute(sql)
     result = curr.fetchall()
-    return {JSONResponse(content=jsonable_encoder(result))}
+    return {
+        "players": [
+            {
+                "username": r["username"],
+                "avgTime": r["avgTime"],
+            }
+            for r in result
+        ],
+    }
+   
