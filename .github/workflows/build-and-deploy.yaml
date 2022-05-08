@@ -1,4 +1,4 @@
-name: lichess-stats.net
+name: lichess-stats.org
 on: push
 
 jobs:

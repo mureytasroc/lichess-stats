@@ -12,7 +12,7 @@ from fastapi_redis_cache import FastApiRedisCache, cache
 
 
 app = FastAPI(
-    title="lichess-stats.net",
+    title="lichess-stats.org",
     docs_url="/api/docs",
     openapi_url="/api.json",
     openapi_tags=tags_metadata,

@@ -8,7 +8,7 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    app_name: str = "lichess-stats.net"
+    app_name: str = "lichess-stats.org"
 
     games_index_url: str = "https://database.lichess.org/standard/list.txt"
 
