@@ -60,5 +60,4 @@ FROM python-base as production
 ENV FASTAPI_ENV=production
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 COPY ./app /app/
-WORKDIR /app
-CMD ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "8000"]
+WORKDIR /app/backend
