@@ -1061,7 +1061,7 @@ function ResultPercentageTwoDimDistributionChart() {
   };
   return (
     <>
-      <RatingTypeSelector handleChange={setRatingType} />
+      <GameTypeSelector handleChange={setRatingType} notAll />
       <Heatmap {...config} />
     </>
   );
