@@ -6,7 +6,7 @@ import selectors
 import chess.pgn
 from tqdm import tqdm
 
-from app.database.connect import get_async_db_connection, get_db_connection
+from app.database.connect import get_async_db_pool, get_db_connection
 from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
 from app.load_data_helpers.util import get_allowed_eco
@@ -293,8 +293,7 @@ async def game_producer(game_file, game_queue):
 
 
 async def game_consumer(queue, pbar):
-    pool = await get_async_db_connection()
-
+    pool = await get_async_db_pool()
     async with pool.acquire() as conn:
         while True:
             game, moves, time_remaining, evaluation = await queue.get()
@@ -310,9 +309,7 @@ async def game_consumer(queue, pbar):
                     await cur.executemany(upsert_evaluation, evaluation)
             await conn.commit()
             pbar.update(1)
-
     pool.close()
-    await pool.wait_closed()
 
 
 async def load_games():

@@ -67,7 +67,7 @@ class RatingByTitle(BaseModel):
 
 
 class RatingByCountryEntry(BaseModel):
-    country: str = Field(description="The player's country.")
+    country: Optional[str] = Field(description="The player's country.")
     avg_rating: Optional[float] = Field(
         ge=0, description="The average rating of players from this country."
     )
@@ -81,8 +81,12 @@ class RatingByCountry(BaseModel):
 
 
 class PlayTimeByRatingEntry(RatingBin):
-    play_time: float = Field(
+    avg_play_time: float = Field(
         ge=0, description="The average total play time (in seconds) for players in this rating bin."
+    )
+    stddev_play_time: float = Field(
+        ge=0,
+        description="The standard deviation of total play time (in seconds) for players in this rating bin.",
     )
 
 
@@ -150,24 +154,40 @@ class CumulativeResultPercentagesByRating(BaseModel):
 
 
 class ResultPercentagesByRatingEntry(RatingBin):
-    win_percentage: float = Field(
-        ge=0, le=100, description="The average win percentage (0-100) of this bin."
+    white_win_percentage: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average win percentage (0-100) of the white player in this bin.",
     )
-    draw_percentage: float = Field(
-        ge=0, le=100, description="The average draw percentage (0-100) of this bin."
+    white_draw_percentage: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average draw percentage (0-100) of the white player in this bin.",
     )
-    loss_percentage: float = Field(
-        ge=0, le=100, description="The average loss percentage (0-100) of this bin."
+    white_loss_percentage: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average loss percentage (0-100) of the white player in this bin.",
+    )
+    black_win_percentage: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average win percentage (0-100) of the black player in this bin.",
+    )
+    black_draw_percentage: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average draw percentage (0-100) of the black player in this bin.",
+    )
+    black_loss_percentage: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average loss percentage (0-100) of the black player in this bin.",
     )
 
 
 class ResultPercentagesByRating(BaseModel):
-    white_bins: List[ResultPercentagesByRatingEntry] = Field(
-        description="An array of rating bins (for games played with the white pieces)."
-    )
-    black_bins: List[ResultPercentagesByRatingEntry] = Field(
-        description="An array of rating bins (for games played with the black pieces)."
-    )
+    bins: List[ResultPercentagesByRatingEntry] = Field(description="An array of rating bins.")
 
 
 class ResultPercentagesByRating2DEntry(BaseModel):
@@ -183,32 +203,32 @@ class ResultPercentagesByRating2DEntry(BaseModel):
     black_rating_max: int = Field(
         description="The maximum rating of the black player for this bin."
     )
-    white_win_percentage: float = Field(
+    white_win_percentage: Optional[float] = Field(
         ge=0,
         le=100,
         description="The average win percentage (0-100) of the white player in this bin.",
     )
-    white_draw_percentage: float = Field(
+    white_draw_percentage: Optional[float] = Field(
         ge=0,
         le=100,
         description="The average draw percentage (0-100) of the white player in this bin.",
     )
-    white_loss_percentage: float = Field(
+    white_loss_percentage: Optional[float] = Field(
         ge=0,
         le=100,
         description="The average loss percentage (0-100) of the white player in this bin.",
     )
-    black_win_percentage: float = Field(
+    black_win_percentage: Optional[float] = Field(
         ge=0,
         le=100,
         description="The average win percentage (0-100) of the black player in this bin.",
     )
-    black_draw_percentage: float = Field(
+    black_draw_percentage: Optional[float] = Field(
         ge=0,
         le=100,
         description="The average draw percentage (0-100) of the black player in this bin.",
     )
-    black_loss_percentage: float = Field(
+    black_loss_percentage: Optional[float] = Field(
         ge=0,
         le=100,
         description="The average loss percentage (0-100) of the black player in this bin.",
