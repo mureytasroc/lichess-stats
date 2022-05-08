@@ -1,6 +1,6 @@
 export const API_BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "https://lichess-stats.org/"
+    ? "https://lichess-stats.org/api"
     : "http://localhost:8000/api";
 
 export function getApiUrl(path) {
