@@ -10,7 +10,7 @@ from app.database.connect import get_async_db_connection, get_db_connection
 from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
 from app.load_data_helpers.util import get_allowed_eco
-from app.sql.statements import upsert_evaluation, upsert_game, upsert_moves, upsert_time_remaining
+from app.sql.statements import upsert_evaluation, upsert_game, upsert_move, upsert_time_remaining
 from decimal import Decimal
 
 
@@ -268,7 +268,7 @@ async def game_consumer(queue, pbar):
             async with conn.cursor() as cur:
                 await cur.execute(upsert_game, game)
                 if moves:
-                    await cur.executemany(upsert_moves, moves)
+                    await cur.executemany(upsert_move, moves)
                 if time_remaining:
                     await cur.executemany(upsert_time_remaining, time_remaining)
                 if evaluation:

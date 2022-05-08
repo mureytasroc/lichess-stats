@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 from app.database.connect import get_db_connection, get_dict_cursor
-from app.database.util import exclusive_end_date, game_type_case, TerminationParity
+from app.database.util import TerminationParity
 
 
 from app.database.util import GameType, title_to_desc
@@ -58,27 +58,6 @@ async def title_distribution():
 
 
 @router.get(
-    "/title/completion-rate",
-    description="Get statistics on game completion rate by title.",
-    response_model=CompletionRateByTitle,
-)
-async def completion_rate_by_title():
-    with dict_cursor() as cur:
-        cur.execute(
-            """
-            SELECT 
-                title,
-                AVG(completion_rate) as avg_completion_rate,
-                STDDEV(completion_rate) as stddev_completion_rate
-            FROM Player
-            GROUP BY title
-            """
-        )
-        result = cur.fetchall()
-    return {"titles": result}
-
-
-@router.get(
     "/title/results",
     description="Get win/draw/loss percentages by title.",
     response_model=ResultPercentagesByTitle,
@@ -101,6 +80,87 @@ async def result_percentages_by_title():
 
 
 @router.get(
+    "/title/completion-rate",
+    description="Get statistics on game completion rate by title.",
+    response_model=CompletionRateByTitle,
+)
+async def completion_rate_by_title(
+    game_type: Optional[GameType] = Query(
+        default=None, description="Optionally, specify a game type to analyze."
+    ),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+):
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH ProfileGame as (
+                SELECT * FROM (
+                    SELECT 
+                        p.title as title,
+                        p.username as username,
+                        g.white_username as white_username,
+                        g.black_username as black_username,
+                        g.result as result,
+                        g.termination as termination,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    UNION
+                    SELECT 
+                        p.title as title,
+                        p.username as username,
+                        g.white_username as white_username,
+                        g.black_username as black_username,
+                        g.result as result,
+                        g.termination as termination,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.black_username = p.username
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+            )
+            SELECT
+                t.title as title,
+                AVG(t.completion_percentage) as avg_completion_rate,
+                STDDEV(t.completion_percentage) as stddev_completion_rate
+            FROM (
+                SELECT
+                    title,
+                    AVG(
+                        CASE WHEN termination = 'Resignation' AND (
+                            (username = white_username AND result = '0-1')
+                            OR (username = black_username AND result = '1-0')
+                        ) THEN 0
+                        ELSE 100 END
+                    ) as completion_percentage
+                FROM ProfileGame
+                GROUP BY username, title
+            ) t
+            GROUP BY t.title
+            """,
+            {
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+        result = cur.fetchall()
+    return {"titles": result}
+
+
+@router.get(
     "/title/termination-type",
     description="Get game termination type percentages by title.",
     response_model=GameTerminationTypeByTitle,
@@ -115,13 +175,13 @@ async def termination_type_by_title(
     ),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
 ):
     with dict_cursor() as cur:
@@ -166,7 +226,7 @@ async def termination_type_by_title(
                     )
                     AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
             ),
             ProfileGameCount as (
                 SELECT username, COUNT(*) as count FROM ProfileGame
@@ -187,9 +247,9 @@ async def termination_type_by_title(
             GROUP BY t.title, t.termination
             """,
             {
-                "game_type": game_type_case(game_type),
+                "game_type": game_type,
                 "start_date": start_date,
-                "end_date": exclusive_end_date(end_date),
+                "end_date": end_date,
                 "termination_parity": termination_parity and termination_parity.lower(),
             },
         )
@@ -221,13 +281,13 @@ async def game_length_by_title(
     ),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
 ):
     with dict_cursor() as cur:
@@ -252,7 +312,7 @@ async def game_length_by_title(
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
             )
             SELECT
                 title,
@@ -262,23 +322,14 @@ async def game_length_by_title(
             GROUP BY title
             """,
             {
-                "game_type": game_type_case(game_type),
+                "game_type": game_type,
                 "start_date": start_date,
-                "end_date": exclusive_end_date(end_date),
+                "end_date": end_date,
             },
         )
         result = cur.fetchall()
 
-    return {
-        "titles": [
-            {
-                "title": r["title"],
-                "avg_game_length": r["avg_game_length"],
-                "stddev_game_length": r["stddev_game_length"],
-            }
-            for r in result
-        ],
-    }
+    return {"titles": result}
 
 
 # Countries
@@ -294,27 +345,6 @@ async def country_distribution():
         cur.execute(
             """
             SELECT country, COUNT(*) as count
-            FROM Player
-            GROUP BY country
-            """
-        )
-        result = cur.fetchall()
-    return {"countries": result}
-
-
-@router.get(
-    "/country/completion-rate",
-    description="Get statistics on player ratings by country.",
-    response_model=CompletionRateByCountry,
-)
-async def completion_rate_by_country():
-    with dict_cursor() as cur:
-        cur.execute(
-            """
-            SELECT 
-                country,
-                AVG(completion_rate) as avg_completion_rate,
-                STDDEV(completion_rate) as stddev_completion_rate
             FROM Player
             GROUP BY country
             """
@@ -346,6 +376,87 @@ async def result_percentages_by_country():
 
 
 @router.get(
+    "/country/completion-rate",
+    description="Get statistics on player ratings by country.",
+    response_model=CompletionRateByCountry,
+)
+async def completion_rate_by_country(
+    game_type: Optional[GameType] = Query(
+        default=None, description="Optionally, specify a game type to analyze."
+    ),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+):
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH ProfileGame as (
+                SELECT * FROM (
+                    SELECT 
+                        p.country as country,
+                        p.username as username,
+                        g.white_username as white_username,
+                        g.black_username as black_username,
+                        g.result as result,
+                        g.termination as termination,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    UNION
+                    SELECT 
+                        p.country as country,
+                        p.username as username,
+                        g.white_username as white_username,
+                        g.black_username as black_username,
+                        g.result as result,
+                        g.termination as termination,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.black_username = p.username
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+            )
+            SELECT
+                t.country as country,
+                AVG(t.completion_percentage) as avg_completion_rate,
+                STDDEV(t.completion_percentage) as stddev_completion_rate
+            FROM (
+                SELECT
+                    country,
+                    AVG(
+                        CASE WHEN termination = 'Resignation' AND (
+                            (username = white_username AND result = '0-1')
+                            OR (username = black_username AND result = '1-0')
+                        ) THEN 0
+                        ELSE 100 END
+                    ) as completion_percentage
+                FROM ProfileGame
+                GROUP BY username, country
+            ) t
+            GROUP BY t.country
+            """,
+            {
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+        result = cur.fetchall()
+    return {"countries": result}
+
+
+@router.get(
     "/country/termination-type",
     description="Get game termination type percentages by country.",
     response_model=GameTerminationTypeByCountry,
@@ -360,13 +471,13 @@ async def termination_type_by_country(
     ),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
 ):
     with dict_cursor() as cur:
@@ -411,7 +522,7 @@ async def termination_type_by_country(
                     )
                     AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
             ),
             ProfileGameCount as (
                 SELECT username, COUNT(*) as count FROM ProfileGame
@@ -432,9 +543,9 @@ async def termination_type_by_country(
             GROUP BY t.country, t.termination
             """,
             {
-                "game_type": game_type_case(game_type),
+                "game_type": game_type,
                 "start_date": start_date,
-                "end_date": exclusive_end_date(end_date),
+                "end_date": end_date,
                 "termination_parity": termination_parity and termination_parity.lower(),
             },
         )
@@ -468,13 +579,13 @@ async def game_length_by_country(
     ),
     start_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify a start month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     end_date: Optional[str] = Query(
         default=None,
-        regex=r"^\d{4}-\d{2}$",
-        description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
 ):
     with dict_cursor() as cur:
@@ -499,7 +610,7 @@ async def game_length_by_country(
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
             )
             SELECT
                 country,
@@ -509,20 +620,11 @@ async def game_length_by_country(
             GROUP BY country
             """,
             {
-                "game_type": game_type_case(game_type),
+                "game_type": game_type,
                 "start_date": start_date,
-                "end_date": exclusive_end_date(end_date),
+                "end_date": end_date,
             },
         )
         result = cur.fetchall()
 
-    return {
-        "countries": [
-            {
-                "country": r["country"],
-                "avg_game_length": r["avg_game_length"],
-                "stddev_game_length": r["stddev_game_length"],
-            }
-            for r in result
-        ],
-    }
+    return {"countries": result}

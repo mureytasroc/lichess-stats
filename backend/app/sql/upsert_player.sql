@@ -60,5 +60,5 @@ REPLACE INTO Player (
 VALUES (
   %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
   %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-  %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+  %s, %s, %s, %s, %s, %s, %s, %s, %s
 );

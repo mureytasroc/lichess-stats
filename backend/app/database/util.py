@@ -73,36 +73,3 @@ class TerminationParity(StrEnum):
     Win = auto()
     Draw = auto()
     Loss = auto()
-
-
-def exclusive_end_date(end_date: Optional[str]):
-    """
-    Converts the given nullable `end_date` from an inclusive format
-    to exclusive (e.g '2022-04' to '2022-05'), or returns None if None.
-    Assumes the `end_date` has already been validated to have the format
-    YYYY-MM if it is not None.
-
-    :param end_date: the date to convert to exclusive, of the form YYYY-MM or None.
-    """
-    if end_date is None:
-        return None
-    end_year, end_month = map(int, end_date.split("-"))
-    if end_month == 12:
-        end_date = f"{end_year+1}-1"
-    else:
-        end_date = f"{end_year}-{end_month+1}"
-
-
-def game_type_case(game_type: Optional[str]):
-    """
-    Converts the given nullable `game_type` to the proper casing to match
-    with the `category` column in the `Game` table of the DB.
-
-    :param game_type: the game type to convert to the proper case
-    """
-    if game_type is None:
-        return None
-    game_type = game_type.lower().title()
-    if game_type == "Ultrabullet":
-        return "UltraBullet"
-    return game_type
