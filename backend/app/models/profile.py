@@ -2,14 +2,14 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.database.util import Title, TerminationType
+from app.database.util import TerminationType, Title
 
 
 # Titles
 
 
 class TitleEntry(BaseModel):
-    title: Optional[Title] = Field(description=f"The player title (or null if untitled)")
+    title: Optional[Title] = Field(description="The player title (or null if untitled)")
 
 
 class TitleDescriptionEntry(TitleEntry):
@@ -151,6 +151,24 @@ class ResultPercentagesByCountry(BaseModel):
     countries: List[ResultPercentagesByCountryEntry] = Field(
         description="An array of country entries."
     )
+
+
+class ResultCountsByCountryEntry(CountryEntry):
+    win_count: Optional[int] = Field(
+        ge=0, description="The total number of wins by players from this country."
+    )
+    draw_count: Optional[int] = Field(
+        ge=0,
+        description="The total number of draws by players from this country.",
+    )
+    loss_count: Optional[int] = Field(
+        ge=0,
+        description="The total number of losses by players from this country.",
+    )
+
+
+class ResultCountsByCountry(BaseModel):
+    countries: List[ResultCountsByCountryEntry] = Field(description="An array of country entries.")
 
 
 class GameTerminationTypeByCountryEntryTerminationType(BaseModel):

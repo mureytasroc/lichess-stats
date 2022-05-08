@@ -1,12 +1,13 @@
-import asyncio
-import aiomysql
+from collections import defaultdict
 from typing import Optional
 
 from fastapi import APIRouter, Path, Query
 
-from app.database.util import GameType, RatingType
+from app.database.connect import get_db_connection, get_dict_cursor
+from app.database.util import GameType, RatingType, TerminationParity, get_rating_col
 from app.models.rating import (
-    AccuracyByRating,
+    CastlingRateByRating,
+    CompletionRateByRating,
     CumulativeResultPercentagesByRating,
     GameLengthByRating,
     GameTerminationTypeByRating,
@@ -20,16 +21,7 @@ from app.models.rating import (
     RatingDistribution,
     ResultPercentagesByRating,
     ResultPercentagesByRating2D,
-    StdDevAccuracyByRating,
-    CompletionRateByRating,
 )
-from app.database.connect import (
-    get_db_connection,
-    get_dict_cursor,
-    get_async_db_pool,
-)
-from collections import defaultdict
-from app.database.util import get_rating_col, TerminationParity
 
 
 router = APIRouter()
@@ -288,7 +280,7 @@ async def completion_rate(
             """
             WITH FilteredGame as (
                 SELECT * FROM (
-                    SELECT 
+                    SELECT
                         white_elo as rating,
                         (
                             CASE WHEN termination = 'Resignation' AND result = '0-1' THEN 0
@@ -298,7 +290,7 @@ async def completion_rate(
                         start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
                     UNION ALL
-                    SELECT 
+                    SELECT
                         black_elo as rating,
                         (
                             CASE WHEN termination = 'Resignation' AND result = '0-1' THEN 0
@@ -308,7 +300,7 @@ async def completion_rate(
                         start_timestamp
                     FROM Game
                 ) t
-                WHERE 
+                WHERE
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
@@ -321,6 +313,85 @@ async def completion_rate(
             FROM FilteredGame
             GROUP BY rating_min
             ORDER BY rating_min
+            """,
+            {
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        result = cur.fetchall()
+    return {"bins": result}
+
+
+@router.get(
+    "/{game_type}/castling-percentage",
+    description="Get the average castling rate, broken down by player rating (rating at the time of the game).",  # noqa: E501
+    response_model=CastlingRateByRating,
+)
+async def castling_percentage(
+    game_type: GameType = Path(..., description="The game type to analyze."),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
+):
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH FlatGame as (
+                SELECT
+                    white_username as username,
+                    white_elo as rating,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation IN ('O-O', 'O-O-O')
+                            AND MOD(ply, 2) = 1
+                    ) THEN 100 ELSE 0 END) as castle
+                FROM Game
+                WHERE (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
+                UNION ALL
+                SELECT
+                    black_username as username,
+                    black_elo as rating,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation IN ('O-O', 'O-O-O')
+                            AND MOD(ply, 2) = 0
+                    ) THEN 100 ELSE 0 END) as castle
+                FROM Game
+                WHERE (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
+            )
+            SELECT
+                t.rating_min as rating_min,
+                t.rating_max as rating_max,
+                AVG(t.castling_rate) as castling_rate
+            FROM (
+                SELECT
+                    FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                    FLOOR(rating/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                    SUM(castle) / COUNT(*) as castling_rate
+                FROM FlatGame
+                GROUP BY rating_min, username
+            ) t
+            GROUP BY t.rating_min
+            ORDER BY t.rating_min
             """,
             {
                 "game_type": game_type,
@@ -357,7 +428,7 @@ async def result_percentages(
             """
             WITH FilteredGame as (
                 SELECT * FROM (
-                    SELECT 
+                    SELECT
                         white_elo as rating,
                         (CASE WHEN result = '1-0' THEN 1 ELSE 0 END) as white_win,
                         NULL as black_win,
@@ -369,7 +440,7 @@ async def result_percentages(
                         start_timestamp
                     FROM Game
                     UNION ALL
-                    SELECT 
+                    SELECT
                         black_elo as rating,
                         NULL as white_win,
                         (CASE WHEN result = '0-1' THEN 1 ELSE 0 END) as black_win,
@@ -381,7 +452,7 @@ async def result_percentages(
                         start_timestamp
                     FROM Game
                 ) t
-                WHERE 
+                WHERE
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
@@ -446,7 +517,7 @@ async def result_percentages_2d(
                 100 * AVG(CASE WHEN result = '0-1' THEN 1 ELSE 0 END) as white_loss_percentage,
                 100 * AVG(CASE WHEN result = '1-0' THEN 1 ELSE 0 END) as black_loss_percentage
             FROM Game
-            WHERE 
+            WHERE
                 (%(game_type)s IS NULL OR %(game_type)s = category)
                 AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
                 AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
@@ -490,21 +561,21 @@ async def game_length(
             """
             WITH FilteredGame as (
                 SELECT * FROM (
-                    SELECT 
+                    SELECT
                         white_elo as rating,
                         game_length,
                         category,
                         start_timestamp
                     FROM Game
                     UNION ALL
-                    SELECT 
+                    SELECT
                         black_elo as rating,
                         game_length,
                         category,
                         start_timestamp
                     FROM Game
                 ) t
-                WHERE 
+                WHERE
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
@@ -556,7 +627,7 @@ async def num_openings(
             """
             WITH FilteredGame as (
                 SELECT * FROM (
-                    SELECT 
+                    SELECT
                         white_elo as rating,
                         white_username as username,
                         opening_eco,
@@ -565,7 +636,7 @@ async def num_openings(
                         start_timestamp
                     FROM Game
                     UNION ALL
-                    SELECT 
+                    SELECT
                         black_elo as rating,
                         black_username as username,
                         opening_eco,
@@ -574,7 +645,7 @@ async def num_openings(
                         start_timestamp
                     FROM Game
                 ) t
-                WHERE 
+                WHERE
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
@@ -635,7 +706,7 @@ async def termination_type(
             """
             WITH FilteredGame as (
                 SELECT * FROM (
-                    SELECT 
+                    SELECT
                         white_elo as rating,
                         game_length,
                         category,
@@ -648,7 +719,7 @@ async def termination_type(
                         OR %(termination_parity)s = 'Loss' AND result = '0-1'
                         OR %(termination_parity)s = 'Draw' AND result = '1/2-1/2'
                     UNION ALL
-                    SELECT 
+                    SELECT
                         black_elo as rating,
                         game_length,
                         category,
@@ -661,13 +732,13 @@ async def termination_type(
                         OR %(termination_parity)s = 'Loss' AND result = '1-0'
                         OR %(termination_parity)s = 'Draw' AND result = '1/2-1/2'
                 ) t
-                WHERE 
+                WHERE
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             ),
             FilteredGameCount as (
-                SELECT 
+                SELECT
                     FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
                     COUNT(*) as count
                 FROM FilteredGame
@@ -710,56 +781,3 @@ async def termination_type(
             for rating_min, rating_max in result
         ],
     }
-
-
-# NOTE: we can't complete the following routes until we add white_accuracy and black_accuracy
-# fields to the game table and analyze games with a chess engine (this is computationally
-# expensive so it might take too long to run for a meaningful number of games; if so
-# we will abandon the following routes)
-
-"""
-@router.get(
-    "/{game_type}/accuracy",
-    description="Get the average game accuracy, broken down by player rating (rating at the time of the game).",  # noqa: E501
-    response_model=AccuracyByRating,
-)
-async def avg_accuracy(
-    game_type: GameType = Path(..., description="The game type to analyze."),
-    start_date: Optional[str] = Query(
-        default=None,
-        regex=r"^\d{4}-\d{2}-\d{2}$",
-        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
-    ),
-    end_date: Optional[str] = Query(
-        default=None,
-        regex=r"^\d{4}-\d{2}-\d{2}$",
-        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
-    ),
-    bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
-):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "avg_accuracy": 70.2}]}
-
-
-@router.get(
-    "/{game_type}/stddev-accuracy",
-    description="Get the standard deviation of game accuracies, broken down by player rating (rating at the time of the game).",  # noqa: E501
-    response_model=StdDevAccuracyByRating,
-)
-async def stddev_accuracy(
-    game_type: GameType = Path(..., description="The game type to analyze."),
-    start_date: Optional[str] = Query(
-        default=None,
-        regex=r"^\d{4}-\d{2}-\d{2}$",
-        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
-    ),
-    end_date: Optional[str] = Query(
-        default=None,
-        regex=r"^\d{4}-\d{2}-\d{2}$",
-        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
-    ),
-    bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
-):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "stddev_accuracy": 10.1}]}
-"""

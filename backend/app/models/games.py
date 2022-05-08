@@ -13,3 +13,16 @@ class DateDistributionEntry(BaseModel):
 
 class DateDistribution(BaseModel):
     dates: List[DateDistributionEntry] = Field(description="An array of date entries.")
+
+
+class CastlingPercentageEntry(BaseModel):
+    username: str = Field(
+        description="The username of this player.",
+    )
+    castling_percentage: float = Field(
+        ge=0, le=100, description="The castling percentage of this player (0-100)."
+    )
+
+
+class CastlingPercentage(BaseModel):
+    players: List[CastlingPercentageEntry] = Field(description="An array of player entries.")

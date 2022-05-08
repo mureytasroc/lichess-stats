@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Select, DatePicker, Slider, Input } from "antd";
 
 const { Option } = Select;
@@ -42,7 +42,7 @@ export function SlicerSelector({ length, handleChange }) {
   );
 }
 
-export function UsernameSelector({ onSearch }) {
+export function UsernameSelector({ onSearch, defaultValue }) {
   return (
     <Search
       placeholder="input username"
@@ -50,6 +50,7 @@ export function UsernameSelector({ onSearch }) {
       enterButton="Search"
       size="large"
       onSearch={onSearch}
+      defaultValue={defaultValue}
     />
   );
 }

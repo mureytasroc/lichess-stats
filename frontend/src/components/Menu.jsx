@@ -66,7 +66,7 @@ export default function MenuBar({ content, scroll }) {
         items={items}
         mode="inline"
         onSelect={(e) => {
-          window.scrollTo(0, (parseInt(e.key) + 1) * window.innerHeight);
+          window.scrollTo(0, (parseInt(e.key, 10) + 1) * window.innerHeight);
         }}
         selectedKeys={[`${scroll - 1}`]}
         openKeys={openKeys}

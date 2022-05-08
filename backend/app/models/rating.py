@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.database.util import Title, TerminationType
+from app.database.util import TerminationType, Title
 
 
 class RatingBin(BaseModel):
@@ -86,7 +86,7 @@ class PlayTimeByRatingEntry(RatingBin):
     )
     stddev_play_time: float = Field(
         ge=0,
-        description="The standard deviation of total play time (in seconds) for players in this rating bin.",
+        description="The standard deviation of total play time (in seconds) for players in this rating bin.",  # noqa: E501
     )
 
 
@@ -109,6 +109,18 @@ class CompletionRateByRatingEntry(RatingBin):
 
 class CompletionRateByRating(BaseModel):
     bins: List[CompletionRateByRatingEntry] = Field(description="An array of rating bins.")
+
+
+class CastlingRateByRatingEntry(RatingBin):
+    castling_rate: Optional[float] = Field(
+        ge=0,
+        le=100,
+        description="The average castling rate (0-100) of players in this rating bin.",
+    )
+
+
+class CastlingRateByRating(BaseModel):
+    bins: List[CastlingRateByRatingEntry] = Field(description="An array of rating bins.")
 
 
 class PercentPatronByRatingEntry(RatingBin):

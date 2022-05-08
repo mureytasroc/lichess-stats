@@ -14,6 +14,8 @@ function App() {
   const content = [
     Charts.GameTimeDistribution,
     Charts.CastlingPercentage,
+    Charts.CastlingTypePercentage,
+    Charts.TimeToWin,
     Charts.TitleDistribution,
     Charts.CompletionRateDistribution,
     Charts.ResultPercentageDistribution,
@@ -21,7 +23,7 @@ function App() {
     Charts.GameLengthDistribution,
   ];
   const [collapse, setCollapse] = useState(false);
-  const [currPage, setCurrPage] = useState(0);
+  const [currPage, setCurrPage] = useState(-1);
   const [menuScroll, setMenuScroll] = useState(0);
   const [loadPages, setLoadPages] = useState(new Set());
 

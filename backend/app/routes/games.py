@@ -3,13 +3,13 @@ from statistics import mode
 from tokenize import String
 from typing import Optional
 
+import pymysql.cursors
 from fastapi import APIRouter, Path, Query
 
-from app.database.util import GameType
-from app.models.games import *
-from app.models.profile import CountryDistribution
-import pymysql.cursors
 from app.database.connect import get_db_connection, get_dict_cursor
+from app.database.util import GameType
+from app.models.games import CastlingPercentage, DateDistribution
+
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ dict_cursor = get_dict_cursor(get_db_connection())
     description="Get the distribution of game dates.",
     response_model=DateDistribution,
 )
-async def title_distribution():
+async def date_distribution():
     with dict_cursor() as cur:
         cur.execute(
             """
@@ -35,61 +35,77 @@ async def title_distribution():
 
 
 @router.get(
-    "/CastlingPercentage",
-    description="Castling Percentage by player",
+    "/castling-percentage",
+    description="Get the castling percentage by player",
+    response_model=CastlingPercentage,
 )
-async def castle(username: Optional[str] = None):
+async def castling_percentage(
+    username: Optional[str] = Query(
+        default=None,
+        description="Optionally, provide a specific username for which to get castling statistics.",  # noqa: E501
+    ),
+    game_type: Optional[GameType] = Query(default=None, description="The game type to analyze."),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+):
     with dict_cursor() as curr:
-        if not username:
-            sql = """WITH player_game AS (SELECT username, lichess_id FROM
-                        Player JOIN Game on Player.username = Game.white_username
-                            UNION ALL SELECT username, lichess_id FROM
-                        Player JOIN Game on Player.username = Game.black_username
-                        ),
-                total_games AS (SELECT username, COUNT(lichess_id) as total FROM
-                player_game GROUP BY username),
-                castleOnly AS (SELECT DISTINCT game_id FROM GameMove
-                WHERE move_notation IN ('O-O', 'O-O-O')),
-                game_moves_castle AS (SELECT username, COUNT(DISTINCT game_id) as castle FROM (
-                player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-                ) GROUP BY username)
-                SELECT total_games.username, castle*100/(total) as Castling_Percentage  FROM (
-                game_moves_castle JOIN total_games ON game_moves_castle.username = total_games.username
-                );"""
-        else:
-            sql = (
-                """
-            WITH player_game AS (SELECT username, lichess_id FROM
-                        Player JOIN Game on Player.username = Game.white_username
-                            UNION ALL SELECT username, lichess_id FROM
-                        Player JOIN Game on Player.username = Game.black_username
-                        ),
-                total_games AS (SELECT username, COUNT(lichess_id) as total FROM
-                player_game GROUP BY username),
-                castleOnly AS (SELECT DISTINCT game_id FROM GameMove
-                WHERE move_notation IN ('O-O', 'O-O-O')),
-                game_moves_castle AS (SELECT username, COUNT(DISTINCT game_id) as castle FROM (
-                player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-                ) GROUP BY username)
-                SELECT total_games.username, castle*100/(total) as Castling_Percentage  FROM (
-                game_moves_castle JOIN total_games ON game_moves_castle.username = total_games.username
-                ) WHERE total_games.username = \'"""
-                + username
-                + "' ; "
+        curr.execute(
+            """
+            WITH FlatGame as (
+                SELECT
+                    white_username as username,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation IN ('O-O', 'O-O-O')
+                            AND MOD(ply, 2) = 1
+                    ) THEN 100 ELSE 0 END) as castle
+                FROM Game
+                WHERE %(username)s IS NULL OR white_username = %(username)s
+                    AND (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
+                UNION ALL
+                SELECT
+                    black_username as username,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation IN ('O-O', 'O-O-O')
+                            AND MOD(ply, 2) = 0
+                    ) THEN 100 ELSE 0 END) as castle
+                FROM Game
+                WHERE %(username)s IS NULL OR black_username = %(username)s
+                    AND (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             )
-
-        curr.execute(sql)
+            SELECT 
+                username,
+                SUM(castle) / COUNT(*) as castling_percentage
+            FROM FlatGame
+            GROUP BY username
+            """,
+            {
+                "username": username,
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
         result = curr.fetchall()
 
-        return {
-            "players": [
-                {
-                    "username": r["username"],
-                    "CastlingPercentage": r["Castling_Percentage"],
-                }
-                for r in result
-            ],
-        }
+        return {"players": result}
 
 
 @router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
@@ -101,7 +117,7 @@ async def ratio(username: Optional[str] = None):
                     UNION ALL SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.black_username
                     ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMoves
+        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMove
         WHERE move_notation IN ('O-O', 'O-O-O')),
         castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
         player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
@@ -124,7 +140,7 @@ async def ratio(username: Optional[str] = None):
                     UNION ALL SELECT username, lichess_id FROM
                 Player JOIN Game on Player.username = Game.black_username
                     ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMoves
+        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMove
         WHERE move_notation IN ('O-O', 'O-O-O')),
         castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
         player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
@@ -151,54 +167,6 @@ async def ratio(username: Optional[str] = None):
                 {
                     "username": r["username"],
                     "RatioKtoQ": r["ratio"],
-                }
-                for r in result
-            ],
-        }
-
-
-@router.get(
-    "/CountryWinPercent",
-    description="Descending order of Country Win Percentages",
-)
-async def win_percent():
-    with dict_cursor() as curr:
-        sql = """SELECT  Country, SUM(wins)*100/ (SUM(losses) + SUM(wins)) as Win_Percentage FROM Player
-    WHERE Country is not NULL
-    GROUP BY Country
-    ORDER BY Win_Percentage DESC;"""
-        curr.execute(sql)
-        result = curr.fetchall()
-        return {
-            "countries": [
-                {
-                    "country": r["Country"],
-                    "win_percent": r["Win_Percentage"],
-                }
-                for r in result
-            ],
-        }
-
-
-@router.get(
-    "/totalWins",
-    description="Descending order of total wins by country",
-)
-async def total_wins():
-    with dict_cursor() as curr:
-        sql = """SELECT Country, SUM(num_games) as Total_Games FROM Player
-    WHERE Country is not NULL
-    GROUP BY Country
-    ORDER BY Total_Games DESC;"""
-
-        curr.execute(sql)
-        result = curr.fetchall()
-
-        return {
-            "countries": [
-                {
-                    "country": r["Country"],
-                    "total_games": r["Total_Games"],
                 }
                 for r in result
             ],

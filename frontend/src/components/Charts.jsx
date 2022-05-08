@@ -461,16 +461,11 @@ function GameTimeDistributionChart() {
   useEffect(() => {
     (async () => {
       const result = await doApiRequest("/games/date-distribution");
-      console.log(result.dates);
       setData(result.dates);
     })();
   }, []);
 
-  return (
-    <>
-      <Line data={data} xField="start_date" yField="count" autoFit />
-    </>
-  );
+  return <Line data={data} xField="start_date" yField="count" autoFit />;
 }
 export const GameTimeDistribution = {
   title: "Game Times",
@@ -480,15 +475,66 @@ export const GameTimeDistribution = {
 
 function CastlingPercentageChart() {
   const [data, setData] = useState([{}]);
-  const [username, setUsername] = useState("ChaShu");
+  const [username, setUsername] = useState("Atom85");
   const [loading, setLoading] = useState(true);
+
+  const [gameType, setGameType] = useState("All");
+  const [startDay, setStartDay] = useState();
+  const [endDay, setEndDay] = useState();
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const result = await doApiRequest("/games/CastlingPercentage", {
+      const params = {};
+      if (gameType !== "All") params.game_type = gameType;
+      if (startDay && startDay.length > 0) params.start_date = startDay;
+      if (endDay && endDay.length > 0) params.end_date = endDay;
+      const result = await doApiRequest("/games/castling-percentage", {
+        username,
+        ...params,
+      });
+      setData(result.players);
+      setLoading(false);
+    })();
+  }, [username, gameType, startDay, endDay]);
+
+  return (
+    <>
+      <div style={{ display: "flex" }}>
+        <GameTypeSelector handleChange={setGameType} />
+        <DaySelector handleChange={setStartDay} />
+        <DaySelector handleChange={setEndDay} />
+      </div>
+      <Statistic
+        title={`Castling Percentage by ${username}`}
+        loading={loading}
+        value={
+          data[0] && data[0].castling_percentage
+            ? `${data[0].castling_percentage}%`
+            : "no data found"
+        }
+      />
+      <UsernameSelector onSearch={setUsername} defaultValue="Atom85" />
+    </>
+  );
+}
+export const CastlingPercentage = {
+  title: "Castling Percentage",
+  content: <CastlingPercentageChart />,
+  group: "Game",
+};
+
+function CastlingTypePercentageChart() {
+  const [data, setData] = useState([{}]);
+  const [username, setUsername] = useState("Atom85");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+
+      const result = await doApiRequest("/games/RatioKtoQ", {
         username,
       });
-
       setData(result.players);
       setLoading(false);
     })();
@@ -497,20 +543,58 @@ function CastlingPercentageChart() {
   return (
     <>
       <Statistic
-        title={`Castling Percentage by ${username}`}
+        title={`Castling Ratio by ${username}`}
         loading={loading}
         value={
-          data[0] && data[0].CastlingPercentage
-            ? data[0].CastlingPercentage + "%"
-            : "user not found"
+          data[0] && data[0].RatioKtoQ
+            ? `${data[0].RatioKtoQ}%`
+            : "no data found"
         }
       />
-      <UsernameSelector onSearch={setUsername} />
+      <UsernameSelector onSearch={setUsername} defaultValue="Atom85" />
     </>
   );
 }
-export const CastlingPercentage = {
-  title: "Castling Percentage",
-  content: <CastlingPercentageChart />,
+export const CastlingTypePercentage = {
+  title: "Ratio of King to Queen Castling",
+  content: <CastlingTypePercentageChart />,
+  group: "Game",
+};
+
+function TimeToWinChart() {
+  const [data, setData] = useState([{}]);
+  const [username, setUsername] = useState("Atom85");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+
+      const result = await doApiRequest("/games/AvgTimeToWin", {
+        username,
+      });
+      setData(result.players);
+      setLoading(false);
+    })();
+  }, [username]);
+
+  return (
+    <>
+      <Statistic
+        title={`Moves to win by ${username}`}
+        loading={loading}
+        value={
+          data[0] && data[0].avgTime
+            ? `${data[0].avgTime / 100} seconds`
+            : "no data found"
+        }
+      />
+      <UsernameSelector onSearch={setUsername} defaultValue="Atom85" />
+    </>
+  );
+}
+export const TimeToWin = {
+  title: "Average Time to Win",
+  content: <TimeToWinChart />,
   group: "Game",
 };
