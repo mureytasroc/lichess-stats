@@ -171,12 +171,21 @@ async def game_producer(game_file, game_queue):
         if opening_eco not in allowed_eco:
             opening_eco = None
 
+        move_nodes = []
+        move = game.next()
+        while move:
+            move_nodes.append(move)
+            move = move.next()
+
+        game_length = Decimal(len(move_nodes)) / Decimal(2)
+
         result = headers["Result"]
         if result == "*":
             continue
         if result not in {"1-0", "0-1", "1/2-1/2"}:
             tqdm.write(f"Unexpected result: '{result}'. Skipping game.")
             continue
+
         termination = headers["Termination"]
         if termination == "Unterminated":
             continue
@@ -208,17 +217,12 @@ async def game_producer(game_file, game_queue):
             black_title,
             opening_name,
             opening_eco,
+            game_length,
             result,
             termination,
             white_rating_diff,
             black_rating_diff,
         )
-
-        move_nodes = []
-        move = game.next()
-        while move:
-            move_nodes.append(move)
-            move = move.next()
 
         moves = [(lichess_id, move.ply(), move.san()) for move in move_nodes]
 

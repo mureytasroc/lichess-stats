@@ -136,7 +136,7 @@ async def termination_type_by_title(
     with dict_cursor() as cur:
         cur.execute(
             """
-            WITH ProfileGames as (
+            WITH ProfileGame as (
                 SELECT * FROM (
                     SELECT 
                         p.title as title,
@@ -177,8 +177,8 @@ async def termination_type_by_title(
                     AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
                     AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
             ),
-            ProfileGameCounts as (
-                SELECT username, COUNT(*) as count FROM ProfileGames g2
+            ProfileGameCount as (
+                SELECT username, COUNT(*) as count FROM ProfileGame
                 GROUP BY username
             )
             SELECT
@@ -190,7 +190,7 @@ async def termination_type_by_title(
                     g.title as title,
                     g.termination as termination,
                     COUNT(*) / c.count as percentage
-                FROM ProfileGames g INNER JOIN ProfileGameCounts c ON g.username = c.username
+                FROM ProfileGame g INNER JOIN ProfileGameCount c ON g.username = c.username
                 GROUP BY g.username, g.title, g.termination
             ) t
             GROUP BY t.title, t.termination
@@ -239,15 +239,62 @@ async def game_length_by_title(
         description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
     ),
 ):
-    # TODO
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            ProfileGame as (
+                SELECT * FROM (
+                    SELECT 
+                        p.title as title,
+                        p.username as username,
+                        g.lichess_id as lichess_id,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    UNION
+                    SELECT 
+                        p.title as title,
+                        p.username as username,
+                        g.lichess_id as lichess_id,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.black_username = p.username
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+            )
+            SELECT
+                t.title as title,
+                AVG(t.length) as avg_length,
+                STDDEV(t.length) as stddev_length
+            FROM (
+                SELECT
+                    g.title as title,
+                    COUNT() as length
+                FROM ProfileGame g INNER JOIN GameMove m ON g.lichess_id = m.game_id
+                GROUP BY g.title, g.username, g.lichess_id
+            ) t
+            GROUP BY t.title
+            """,
+            {
+                "game_type": game_type_case(game_type),
+                "start_date": start_date,
+                "end_date": exclusive_end_date(end_date),
+            },
+        )
+        result = cur.fetchall()
+
     return {
         "titles": [
             {
-                "title": "GM",
-                "avg_game_length": 30,
-                "stddev_game_length": 10,
+                "title": r["title"],
+                "avg_game_length": r["avg_length"],
+                "stddev_game_length": r["stddev_length"],
             }
-        ]
+            for r in result
+        ],
     }
 
 

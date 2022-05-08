@@ -18,9 +18,10 @@ INSERT IGNORE INTO Game (
      opening_name,
      opening_eco,
      
+     game_length,
      result,
      termination,
      white_rating_diff,
      black_rating_diff
   )
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);

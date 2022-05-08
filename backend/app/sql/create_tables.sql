@@ -63,9 +63,9 @@ CREATE TABLE IF NOT EXISTS Player
 
 CREATE TABLE EcoCode
 (
-    code                       varchar(10) PRIMARY KEY,
-    opening_name               varchar(256),
-    opening_moves              varchar(512)
+    code                       CHAR(3) PRIMARY KEY,
+    opening_name               VARCHAR(256),
+    opening_moves              VARCHAR(512)
 );
 
 CREATE TABLE IF NOT EXISTS Game
@@ -86,9 +86,10 @@ CREATE TABLE IF NOT EXISTS Game
      black_elo                 SMALLINT UNSIGNED NOT NULL, -- glicko2
      black_title               ENUM('GM', 'WGM', 'IM', 'WIM', 'FM', 'WFM', 'NM', 'CM', 'WCM', 'WNM' , 'LM', 'BOT'),
      
-     opening_name              VARCHAR(256) NOT NULL,
+     opening_name              VARCHAR(256) NOT NULL, -- not necessarily the same as EcoCode.opening_name
      opening_eco               CHAR(3), -- less specific than opening_name
 
+     game_length               DECIMAL(4, 1) NOT NULL, -- number of moves with 0.5 for half-moves (denormalized for performance)
      result                    ENUM('1-0', '0-1', '1/2-1/2') NOT NULL,
      termination               ENUM('Checkmate', 'Resignation', 'DrawAgreement', 'Stalemate', 'InsufficientMaterial', 'FiftyMoveRule', 'ThreefoldRepetition', 'SeventyFiveMoveRule', 'FivefoldRepetition', 'TimeForfeit', 'RulesInfraction') NOT NULL,
      white_rating_diff         SMALLINT, -- white's rating change from game
