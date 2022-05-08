@@ -41,8 +41,12 @@ RUN apt-get update \
     # deps for building python deps
     build-essential
 
+# install poetry deps
+RUN pip install cleo tomlkit poetry.core requests cachecontrol cachy html5lib \
+    pkginfo virtualenv lockfile jsonschema pyparsing pexpect shellingham
+
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
-RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python3
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
@@ -50,26 +54,6 @@ COPY poetry.lock pyproject.toml ./
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 RUN poetry install --no-dev
-
-
-# `development` image is used during development / testing
-FROM python-base as development
-ENV FASTAPI_ENV=development
-WORKDIR $PYSETUP_PATH
-
-# copy in our built poetry + venv
-COPY --from=builder-base $POETRY_HOME $POETRY_HOME
-COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
-
-# quicker install as runtime deps are already installed
-RUN poetry install
-
-# will become mountpoint of our code
-WORKDIR /app
-
-EXPOSE 8000
-CMD ["uvicorn", "--reload", "main:app"]
-
 
 # `production` image used for runtime
 FROM python-base as production
