@@ -34,10 +34,10 @@ REPLACE INTO Player (
      rapid_prog,
      rapid_num_games,
 
-     classsical_rating,
-     classsical_rd,
-     classsical_prog,
-     classsical_num_games,
+     classical_rating,
+     classical_rd,
+     classical_prog,
+     classical_num_games,
 
      correspondence_rating,
      correspondence_rd,

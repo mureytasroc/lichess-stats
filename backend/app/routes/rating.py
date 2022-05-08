@@ -20,9 +20,13 @@ from app.models.rating import (
     ResultPercentagesByRating2D,
     StdDevAccuracyByRating,
 )
+from app.database.connect import get_db_connection, get_dict_cursor
+from app.database.util import get_rating_col
 
 
 router = APIRouter()
+
+dict_cursor = get_dict_cursor(get_db_connection())
 
 
 @router.get(
@@ -34,8 +38,23 @@ async def distribution(
     rating_type: RatingType = Path(..., description="The rating type."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "count": 1}]}
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                COUNT(*) as count
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -47,24 +66,31 @@ async def compare(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {
-        "bins": [
-            {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "ultrabullet_rating": 1000,
-                "bullet_rating": 1000,
-                "blitz_rating": 1000,
-                "rapid_rating": 1000,
-                "classical_rating": 1000,
-                "correspondence_rating": 1000,
-                "fide_rating": 1000,
-                "uscf_rating": 1000,
-                "ecf_rating": 1000,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(ultrabullet_rating) as ultrabullet_rating,
+                AVG(bullet_rating) as bullet_rating,
+                AVG(blitz_rating) as blitz_rating,
+                AVG(rapid_rating) as rapid_rating,
+                AVG(classical_rating) as classical_rating,
+                AVG(correspondence_rating) as correspondence_rating,
+                AVG(fide_rating) as fide_rating,
+                AVG(uscf_rating) as uscf_rating,
+                AVG(ecf_rating) as ecf_rating
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(

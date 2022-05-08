@@ -73,3 +73,7 @@ class TerminationParity(StrEnum):
     Win = auto()
     Draw = auto()
     Loss = auto()
+
+
+def get_rating_col(rating_type):
+    return rating_type.lower() + "_rating"

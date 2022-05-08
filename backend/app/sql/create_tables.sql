@@ -36,10 +36,10 @@ CREATE TABLE IF NOT EXISTS Player
      rapid_prog                SMALLINT, -- recent rating change
      rapid_num_games           INT UNSIGNED, -- number of games played in this category
 
-     classsical_rating         SMALLINT UNSIGNED, -- glicko2 rating
-     classsical_rd             SMALLINT UNSIGNED, -- glicko2 rating deviation
-     classsical_prog           SMALLINT, -- recent rating change
-     classsical_num_games      INT UNSIGNED, -- number of games played in this category
+     classical_rating         SMALLINT UNSIGNED, -- glicko2 rating
+     classical_rd             SMALLINT UNSIGNED, -- glicko2 rating deviation
+     classical_prog           SMALLINT, -- recent rating change
+     classical_num_games      INT UNSIGNED, -- number of games played in this category
 
      correspondence_rating     SMALLINT UNSIGNED, -- glicko2 rating
      correspondence_rd         SMALLINT UNSIGNED, -- glicko2 rating deviation

@@ -6,8 +6,8 @@ from app.database.util import Title, TerminationType
 
 
 class RatingBin(BaseModel):
-    rating_min: int = Field(ge=0, description="The minimum rating of this bin.")
-    rating_max: int = Field(ge=0, description="The maximum rating of this bin.")
+    rating_min: int = Field(ge=0, description="The minimum rating of this bin (inclusive).")
+    rating_max: int = Field(ge=0, description="The maximum rating of this bin (exclusive).")
 
 
 class RatingDistributionEntry(RatingBin):
