@@ -78,7 +78,7 @@ jobs:
         run: >-
           cd helm
 
-          aws eks --region us-east-1 update-kubeconfig --name lichess-stats-cluster
+          aws eks --region us-east-1 update-kubeconfig --name education-eks-SbbfLoEv
 
           kubectl config set-context --current --namespace default
 
