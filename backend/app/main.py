@@ -1,14 +1,14 @@
+import os
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-import os
+from fastapi_redis_cache import FastApiRedisCache, cache
 
 from app.documentation import tags_metadata
 from app.routes import api
 from app.util import in_prod, setup_sentry
-from fastapi_redis_cache import FastApiRedisCache, cache
 
 
 app = FastAPI(
@@ -31,7 +31,6 @@ app.add_middleware(
 
 # Prod middlewares
 if in_prod():
-    app.add_middleware(HTTPSRedirectMiddleware)
     setup_sentry(app)
 
     @app.on_event("startup")
