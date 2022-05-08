@@ -210,7 +210,7 @@ async def profile_consumer(queue, pbar):
     await pool.wait_closed()
 
 
-async def load_profiles(username_queue, username_producer_task):
+async def load_profiles():
     username_queue = asyncio.Queue(maxsize=args.queue_limit)
     profile_queue = asyncio.Queue(maxsize=args.queue_limit)
     with tqdm() as pbar:
