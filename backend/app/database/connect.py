@@ -2,7 +2,7 @@ import aiomysql
 import pymysql
 
 from app.config import settings
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
 
 
 def get_db_connection():
@@ -36,7 +36,7 @@ def get_dict_cursor(db_connection):
     return dict_cursor
 
 
-def get_async_db_connection():
+def get_async_db_pool():
     return aiomysql.create_pool(
         host=settings.db_host,
         port=settings.db_port,

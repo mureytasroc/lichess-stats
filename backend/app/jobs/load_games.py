@@ -6,12 +6,13 @@ import selectors
 import chess.pgn
 from tqdm import tqdm
 
-from app.database.connect import get_async_db_connection, get_db_connection
+from app.database.connect import get_async_db_pool, get_db_connection
 from app.database.util import GameType, TerminationType
 from app.load_data_helpers.get_games_files import get_games_files
 from app.load_data_helpers.util import get_allowed_eco
 from app.sql.statements import upsert_evaluation, upsert_game, upsert_move, upsert_time_remaining
 from decimal import Decimal
+from math import ceil
 
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
@@ -34,12 +35,20 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--max-games",
+    "-g",
+    type=int,
+    default=None,
+    help=("The max number of games to load (across all workers)."),
+)
+
+parser.add_argument(
     "--from-date",
     type=str,
     default=None,
     help=(
         "The date of the earliest game file to get usernames from, "
-        "of the form YYYY-MM (defaults to the beginning of lichess's game history)."
+        "of the form YYYY-MM-DD (UTC) (defaults to the beginning of lichess's game history)."
     ),
 )
 
@@ -49,7 +58,7 @@ parser.add_argument(
     default=None,
     help=(
         "The date of the latest game file to get usernames from, "
-        "of the form YYYY-MM (defaults to the end of lichess's game history)."
+        "of the form YYYY-MM-DD (UTC) (defaults to the end of lichess's game history)."
     ),
 )
 
@@ -95,6 +104,16 @@ assert args.queue_limit > 0
 assert args.num_consumers > 0
 assert args.num_workers > 0
 assert 0 <= args.worker_num < args.num_workers
+assert args.max_games is None or args.max_games > 0
+
+from_date_month = None
+if args.from_date:
+    assert re.match(r"^\d{4}-\d{2}-\d{2}$", args.from_date)
+    from_date_month = "-".join(args.from_date.split("-")[:2])
+to_date_month = None
+if args.to_date:
+    assert re.match(r"^\d{4}-\d{2}-\d{2}$", args.to_date)
+    to_date_month = "-".join(args.to_date.split("-")[:2])
 
 
 def get_existing_game_ids():
@@ -111,6 +130,10 @@ def get_existing_game_ids():
 
 existing_game_ids = get_existing_game_ids()
 
+max_games = None
+if args.max_games:
+    max_games = ceil((args.max_games - len(existing_game_ids)) / args.num_workers)
+
 id_re = re.compile(r"org/(.*)/?")
 tournament_id_re = re.compile(r"tournament/(.*)/?")
 
@@ -118,9 +141,12 @@ allowed_eco = get_allowed_eco()
 
 
 async def game_producer(game_file, game_queue):
+    global max_games
     i = -1
     while True:
         i += 1
+        if max_games is not None and max_games <= 0:
+            break
         game = chess.pgn.read_game(game_file)
         if not game:
             break
@@ -137,7 +163,12 @@ async def game_producer(game_file, game_queue):
         tournament_id_match = tournament_id_re.search(headers["Event"])
         tournament_id = tournament_id_match.group(1) if tournament_id_match else None
 
-        start_timestamp = headers["UTCDate"].replace(".", "-") + " " + headers["UTCTime"]
+        date = headers["UTCDate"].replace(".", "-")
+        if args.from_date and args.from_date != from_date_month and date < args.from_date:
+            continue
+        if args.to_date and args.to_date != to_date_month and date > args.to_date:
+            break
+        start_timestamp = date + " " + headers["UTCTime"]
 
         try:
             category = ({c.value for c in GameType} & set(headers["Event"].split())).pop()
@@ -176,6 +207,8 @@ async def game_producer(game_file, game_queue):
         while move:
             move_nodes.append(move)
             move = move.next()
+        if not move_nodes:
+            continue
 
         game_length = Decimal(len(move_nodes)) / Decimal(2)
 
@@ -253,13 +286,14 @@ async def game_producer(game_file, game_queue):
                 (lichess_id, move.ply(), score if forced_mate is None else None, forced_mate)
             )
 
+        if max_games:
+            max_games -= 1
         await game_queue.put((game_tup, moves, time_remaining, evaluation))
     await game_queue.put((None,) * 4)
 
 
 async def game_consumer(queue, pbar):
-    pool = await get_async_db_connection()
-
+    pool = await get_async_db_pool()
     async with pool.acquire() as conn:
         while True:
             game, moves, time_remaining, evaluation = await queue.get()
@@ -275,15 +309,13 @@ async def game_consumer(queue, pbar):
                     await cur.executemany(upsert_evaluation, evaluation)
             await conn.commit()
             pbar.update(1)
-
     pool.close()
-    await pool.wait_closed()
 
 
 async def load_games():
     for game_file_context in get_games_files(
-        from_date=args.from_date,
-        to_date=args.to_date,
+        from_date=from_date_month,
+        to_date=to_date_month,
         ascending=args.ascending,
         save_files=args.save_files,
     ):

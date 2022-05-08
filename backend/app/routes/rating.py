@@ -1,3 +1,5 @@
+import asyncio
+import aiomysql
 from typing import Optional
 
 from fastapi import APIRouter, Path, Query
@@ -19,10 +21,20 @@ from app.models.rating import (
     ResultPercentagesByRating,
     ResultPercentagesByRating2D,
     StdDevAccuracyByRating,
+    CompletionRateByRating,
 )
+from app.database.connect import (
+    get_db_connection,
+    get_dict_cursor,
+    get_async_db_pool,
+)
+from collections import defaultdict
+from app.database.util import get_rating_col, TerminationParity
 
 
 router = APIRouter()
+
+dict_cursor = get_dict_cursor(get_db_connection())
 
 
 @router.get(
@@ -34,8 +46,23 @@ async def distribution(
     rating_type: RatingType = Path(..., description="The rating type."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "count": 1}]}
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                COUNT(*) as count
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -47,24 +74,31 @@ async def compare(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {
-        "bins": [
-            {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "ultrabullet_rating": 1000,
-                "bullet_rating": 1000,
-                "blitz_rating": 1000,
-                "rapid_rating": 1000,
-                "classical_rating": 1000,
-                "correspondence_rating": 1000,
-                "fide_rating": 1000,
-                "uscf_rating": 1000,
-                "ecf_rating": 1000,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(ultrabullet_rating) as ultrabullet_rating,
+                AVG(bullet_rating) as bullet_rating,
+                AVG(blitz_rating) as blitz_rating,
+                AVG(rapid_rating) as rapid_rating,
+                AVG(classical_rating) as classical_rating,
+                AVG(correspondence_rating) as correspondence_rating,
+                AVG(fide_rating) as fide_rating,
+                AVG(uscf_rating) as uscf_rating,
+                AVG(ecf_rating) as ecf_rating
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -75,16 +109,20 @@ async def compare(
 async def title(
     rating_type: RatingType = Path(..., description="The rating type to analyze."),
 ):
-    # TODO
-    return {
-        "titles": [
-            {
-                "title": "GM",
-                "avg_rating": 3000,
-                "stddev_rating": 200,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                title,
+                AVG({rating_col}) as avg_rating,
+                STDDEV({rating_col}) as stddev_rating
+            FROM Player
+            GROUP BY title
+            """,
+        )
+        result = cur.fetchall()
+    return {"titles": result}
 
 
 @router.get(
@@ -95,16 +133,20 @@ async def title(
 async def country(
     rating_type: RatingType = Path(..., description="The rating type to analyze."),
 ):
-    # TODO
-    return {
-        "countries": [
-            {
-                "country": "US",
-                "avg_rating": 3000,
-                "stddev_rating": 200,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                country,
+                AVG({rating_col}) as avg_rating,
+                STDDEV({rating_col}) as stddev_rating
+            FROM Player
+            GROUP BY country
+            """,
+        )
+        result = cur.fetchall()
+    return {"countries": result}
 
 
 @router.get(
@@ -116,8 +158,24 @@ async def play_time(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "play_time": 100000}]}
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(play_time) as avg_play_time,
+                STDDEV(play_time) as stddev_play_time
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -129,8 +187,23 @@ async def percent_patron(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "percent_patron": 5.2}]}
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(patron * 100) as percent_patron
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -142,8 +215,23 @@ async def percent_tos_violators(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "percent_tos_violators": 1.1}]}
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(tos_violation * 100) as percent_tos_violators
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -155,24 +243,31 @@ async def cumulative_result_percentages(
     rating_type: RatingType = Path(..., description="The rating type over which to bin."),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {
-        "bins": [
-            {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "win_percentage": 48.5,
-                "draw_percentage": 5,
-                "loss_percentage": 46.5,
-            }
-        ],
-    }
+    with dict_cursor() as cur:
+        rating_col = get_rating_col(rating_type)
+        cur.execute(
+            f"""
+            SELECT
+                FLOOR({rating_col}/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR({rating_col}/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                100 * AVG(wins / (wins+draws+losses)) as win_percentage,
+                100 * AVG(draws / (wins+draws+losses)) as draw_percentage,
+                100 * AVG(losses / (wins+draws+losses)) as loss_percentage
+            FROM Player
+            WHERE {rating_col} IS NOT NULL
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {"bin_size": bin_size},
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
-    "/{rating_type}/completion-rate",
+    "/{game_type}/completion-rate",
     description="Get the average cumulative completion rate, broken down by player rating (rating at the time of the game).",  # noqa: E501
-    response_model=PlayTimeByRating,
+    response_model=CompletionRateByRating,
 )
 async def completion_rate(
     game_type: GameType = Path(..., description="The game type to analyze."),
@@ -188,8 +283,54 @@ async def completion_rate(
     ),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {"bins": [{"rating_min": 1000, "rating_max": 1010, "completion_rate": 80.2}]}
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH FilteredGame as (
+                SELECT * FROM (
+                    SELECT 
+                        white_elo as rating,
+                        (
+                            CASE WHEN termination = 'Resignation' AND result = '0-1' THEN 0
+                            ELSE 100 END
+                        ) as completion,
+                        category,
+                        start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    UNION ALL
+                    SELECT 
+                        black_elo as rating,
+                        (
+                            CASE WHEN termination = 'Resignation' AND result = '0-1' THEN 0
+                            ELSE 100 END
+                        ) as completion,
+                        category,
+                        start_timestamp
+                    FROM Game
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
+            )
+            SELECT
+                FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR(rating/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(completion) as avg_completion_rate,
+                STDDEV(completion) as stddev_completion_rate
+            FROM FilteredGame
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
+            {
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -211,27 +352,62 @@ async def result_percentages(
     ),
     bin_size: int = Query(default=10, ge=1, description="Optionally, specify the rating bin size."),
 ):
-    # TODO
-    return {
-        "white_bins": [
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH FilteredGame as (
+                SELECT * FROM (
+                    SELECT 
+                        white_elo as rating,
+                        (CASE WHEN result = '1-0' THEN 1 ELSE 0 END) as white_win,
+                        NULL as black_win,
+                        (CASE WHEN result = '1/2-1/2' THEN 1 ELSE 0 END) as white_draw,
+                        NULL as black_draw,
+                        (CASE WHEN result = '0-1' THEN 1 ELSE 0 END) as white_loss,
+                        NULL as black_loss,
+                        category,
+                        start_timestamp
+                    FROM Game
+                    UNION ALL
+                    SELECT 
+                        black_elo as rating,
+                        NULL as white_win,
+                        (CASE WHEN result = '0-1' THEN 1 ELSE 0 END) as black_win,
+                        NULL as white_draw,
+                        (CASE WHEN result = '1/2-1/2' THEN 1 ELSE 0 END) as black_draw,
+                        NULL as white_loss,
+                        (CASE WHEN result = '1-0' THEN 1 ELSE 0 END) as black_loss,
+                        category,
+                        start_timestamp
+                    FROM Game
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
+            )
+            SELECT
+                FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR(rating/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                100 * AVG(white_win) as white_win_percentage,
+                100 * AVG(black_win) as black_win_percentage,
+                100 * AVG(white_draw) as white_draw_percentage,
+                100 * AVG(black_draw) as black_draw_percentage,
+                100 * AVG(white_loss) as white_loss_percentage,
+                100 * AVG(black_loss) as black_loss_percentage
+            FROM FilteredGame
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
             {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "win_percentage": 50,
-                "draw_percentage": 5,
-                "loss_percentage": 45,
-            }
-        ],
-        "black_bins": [
-            {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "win_percentage": 47,
-                "draw_percentage": 5,
-                "loss_percentage": 48,
-            }
-        ],
-    }
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -252,26 +428,40 @@ async def result_percentages_2d(
         description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
     ),
     bin_size: int = Query(
-        default=10, ge=1, description="Optionally, specify the rating bin size (for each color)."
+        default=50, ge=1, description="Optionally, specify the rating bin size (for each color)."
     ),
 ):
-    # TODO
-    return {
-        "bins": [
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                FLOOR(white_elo/%(bin_size)s) * %(bin_size)s as white_rating_min,
+                FLOOR(white_elo/%(bin_size)s + 1) * %(bin_size)s as white_rating_max,
+                FLOOR(black_elo/%(bin_size)s) * %(bin_size)s as black_rating_min,
+                FLOOR(black_elo/%(bin_size)s + 1) * %(bin_size)s as black_rating_max,
+                100 * AVG(CASE WHEN result = '1-0' THEN 1 ELSE 0 END) as white_win_percentage,
+                100 * AVG(CASE WHEN result = '0-1' THEN 1 ELSE 0 END) as black_win_percentage,
+                100 * AVG(CASE WHEN result = '1/2-1/2' THEN 1 ELSE 0 END) as white_draw_percentage,
+                100 * AVG(CASE WHEN result = '1/2-1/2' THEN 1 ELSE 0 END) as black_draw_percentage,
+                100 * AVG(CASE WHEN result = '0-1' THEN 1 ELSE 0 END) as white_loss_percentage,
+                100 * AVG(CASE WHEN result = '1-0' THEN 1 ELSE 0 END) as black_loss_percentage
+            FROM Game
+            WHERE 
+                (%(game_type)s IS NULL OR %(game_type)s = category)
+                AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
+            GROUP BY white_rating_min, black_rating_min
+            ORDER BY white_rating_min, black_rating_min
+            """,
             {
-                "white_rating_min": 1000,
-                "white_rating_max": 1010,
-                "black_rating_min": 1000,
-                "black_rating_max": 1010,
-                "white_win_percentage": 60.2,
-                "white_draw_percentage": 60.2,
-                "white_loss_percentage": 60.2,
-                "black_win_percentage": 45,
-                "black_draw_percentage": 45,
-                "black_loss_percentage": 45,
-            }
-        ]
-    }
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -295,16 +485,47 @@ async def game_length(
         default=10, ge=1, description="Optionally, specify the rating bin size (for each color)."
     ),
 ):
-    # TODO
-    return {
-        "bins": [
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH FilteredGame as (
+                SELECT * FROM (
+                    SELECT 
+                        white_elo as rating,
+                        game_length,
+                        category,
+                        start_timestamp
+                    FROM Game
+                    UNION ALL
+                    SELECT 
+                        black_elo as rating,
+                        game_length,
+                        category,
+                        start_timestamp
+                    FROM Game
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
+            )
+            SELECT
+                FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR(rating/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                AVG(game_length) as game_length
+            FROM FilteredGame
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
             {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "game_length": 22.5,
-            }
-        ],
-    }
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -314,12 +535,6 @@ async def game_length(
 )
 async def num_openings(
     game_type: GameType = Path(..., description="The game type to analyze."),
-    minimum_frequency: Optional[float] = Query(
-        default=None,
-        ge=0,
-        le=100,
-        description="Optionally, specify the minimum percentage (0-100) of games in which an opening is used by a player, in order to count the opening for that player. By default, there is no minimum frequency.",  # noqa: E501
-    ),
     start_date: Optional[str] = Query(
         default=None,
         regex=r"^\d{4}-\d{2}-\d{2}$",
@@ -336,16 +551,58 @@ async def num_openings(
         description="Optionally, specify the rating bin size (for each color). For this route, bin size should be higher to get enough per-player data.",  # noqa: E501
     ),
 ):
-    # TODO
-    return {
-        "bins": [
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH FilteredGame as (
+                SELECT * FROM (
+                    SELECT 
+                        white_elo as rating,
+                        white_username as username,
+                        opening_eco,
+                        game_length,
+                        category,
+                        start_timestamp
+                    FROM Game
+                    UNION ALL
+                    SELECT 
+                        black_elo as rating,
+                        black_username as username,
+                        opening_eco,
+                        game_length,
+                        category,
+                        start_timestamp
+                    FROM Game
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
+            )
+            SELECT
+                t.rating_min as rating_min,
+                t.rating_max as rating_max,
+                AVG(t.num_openings) as num_openings
+            FROM (
+                SELECT
+                    FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                    FLOOR(rating/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                    COUNT(DISTINCT(opening_eco)) as num_openings
+                FROM FilteredGame
+                GROUP BY rating_min, username
+            ) t
+            GROUP BY rating_min
+            ORDER BY rating_min
+            """,
             {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "num_openings": 3.5,
-            }
-        ],
-    }
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        result = cur.fetchall()
+    return {"bins": result}
 
 
 @router.get(
@@ -354,6 +611,10 @@ async def num_openings(
     response_model=GameTerminationTypeByRating,
 )
 async def termination_type(
+    termination_parity: Optional[TerminationParity] = Query(
+        default=None,
+        description="Optionally, specify the parity of the result (win, draw, or loss) from the perspective of the player from the relevant country.",  # noqa: E501
+    ),
     game_type: GameType = Path(..., description="The game type to analyze."),
     start_date: Optional[str] = Query(
         default=None,
@@ -369,17 +630,84 @@ async def termination_type(
         default=10, ge=1, description="Optionally, specify the rating bin size (for each color)."
     ),
 ):
-    # TODO
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH FilteredGame as (
+                SELECT * FROM (
+                    SELECT 
+                        white_elo as rating,
+                        game_length,
+                        category,
+                        termination,
+                        start_timestamp
+                    FROM Game
+                    WHERE
+                        %(termination_parity)s IS NULL
+                        OR %(termination_parity)s = 'Win' AND result = '1-0'
+                        OR %(termination_parity)s = 'Loss' AND result = '0-1'
+                        OR %(termination_parity)s = 'Draw' AND result = '1/2-1/2'
+                    UNION ALL
+                    SELECT 
+                        black_elo as rating,
+                        game_length,
+                        category,
+                        termination,
+                        start_timestamp
+                    FROM Game
+                    WHERE
+                        %(termination_parity)s IS NULL
+                        OR %(termination_parity)s = 'Win' AND result = '0-1'
+                        OR %(termination_parity)s = 'Loss' AND result = '1-0'
+                        OR %(termination_parity)s = 'Draw' AND result = '1/2-1/2'
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
+            ),
+            FilteredGameCount as (
+                SELECT 
+                    FLOOR(rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                    COUNT(*) as count
+                FROM FilteredGame
+                GROUP BY rating_min
+            )
+            SELECT
+                FLOOR(g.rating/%(bin_size)s) * %(bin_size)s as rating_min,
+                FLOOR(g.rating/%(bin_size)s + 1) * %(bin_size)s as rating_max,
+                g.termination as termination,
+                100 * COUNT(*) / c.count as percentage
+            FROM FilteredGame g INNER JOIN FilteredGameCount c ON
+                FLOOR(g.rating/%(bin_size)s) * %(bin_size)s = c.rating_min
+            GROUP BY rating_min, g.termination
+            ORDER BY rating_min
+            """,
+            {
+                "termination_parity": termination_parity,
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "bin_size": bin_size,
+            },
+        )
+        flat_result = cur.fetchall()
+    result = defaultdict(list)
+    for r in flat_result:
+        result[r["rating_min"], r["rating_max"]].append(
+            {
+                "termination_type": r["termination"],
+                "percentage": r["percentage"],
+            }
+        )
     return {
         "bins": [
             {
-                "rating_min": 1000,
-                "rating_max": 1010,
-                "normal_percentage": 22.5,
-                "resignation_percentage": 22.5,
-                "time_forfeit_percentage": 22.5,
-                "abandoned_percentage": 22.5,
+                "rating_min": rating_min,
+                "rating_max": rating_max,
+                "termination_types": result[rating_min, rating_max],
             }
+            for rating_min, rating_max in result
         ],
     }
 
@@ -389,7 +717,7 @@ async def termination_type(
 # expensive so it might take too long to run for a meaningful number of games; if so
 # we will abandon the following routes)
 
-
+"""
 @router.get(
     "/{game_type}/accuracy",
     description="Get the average game accuracy, broken down by player rating (rating at the time of the game).",  # noqa: E501
@@ -434,3 +762,4 @@ async def stddev_accuracy(
 ):
     # TODO
     return {"bins": [{"rating_min": 1000, "rating_max": 1010, "stddev_accuracy": 10.1}]}
+"""

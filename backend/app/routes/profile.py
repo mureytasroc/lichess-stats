@@ -68,9 +68,9 @@ async def result_percentages_by_title():
             """
             SELECT 
                 title,
-                100 * AVG(wins / num_games) as win_percentage,
-                100 * AVG(draws / num_games) as draw_percentage,
-                100 * AVG(losses / num_games) as loss_percentage
+                100 * AVG(wins / (wins+draws+losses)) as win_percentage,
+                100 * AVG(draws / (wins+draws+losses)) as draw_percentage,
+                100 * AVG(losses / (wins+draws+losses)) as loss_percentage
             FROM Player
             GROUP BY title
             """
@@ -114,7 +114,7 @@ async def completion_rate_by_title(
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
-                    UNION
+                    UNION ALL
                     SELECT 
                         p.title as title,
                         p.username as username,
@@ -128,8 +128,8 @@ async def completion_rate_by_title(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 t.title as title,
@@ -199,7 +199,7 @@ async def termination_type_by_title(
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
-                    UNION
+                    UNION ALL
                     SELECT 
                         p.title as title,
                         p.username as username,
@@ -214,19 +214,19 @@ async def termination_type_by_title(
                 WHERE 
                     (
                         %(termination_parity)s IS NULL
-                        OR %(termination_parity)s = 'win' 
+                        OR %(termination_parity)s = 'Win' 
                             AND t.white_username = t.username AND t.result = '1-0'
-                        OR %(termination_parity)s = 'loss' 
+                        OR %(termination_parity)s = 'Loss' 
                             AND t.white_username = t.username AND t.result = '0-1'
-                        OR %(termination_parity)s = 'win' 
+                        OR %(termination_parity)s = 'Win' 
                             AND t.black_username = t.username AND t.result = '0-1'
-                        OR %(termination_parity)s = 'loss' 
+                        OR %(termination_parity)s = 'Loss' 
                             AND t.black_username = t.username AND t.result = '1-0'
-                        OR %(termination_parity)s = 'draw' AND t.result = '1/2-1/2'
+                        OR %(termination_parity)s = 'Draw' AND t.result = '1/2-1/2'
                     )
                     AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             ),
             ProfileGameCount as (
                 SELECT username, COUNT(*) as count FROM ProfileGame
@@ -242,7 +242,7 @@ async def termination_type_by_title(
                     g.termination as termination,
                     100 * COUNT(*) / c.count as percentage
                 FROM ProfileGame g INNER JOIN ProfileGameCount c ON g.username = c.username
-                GROUP BY g.username, g.title, g.termination
+                GROUP BY g.username, c.count, g.title, g.termination
             ) t
             GROUP BY t.title, t.termination
             """,
@@ -250,7 +250,7 @@ async def termination_type_by_title(
                 "game_type": game_type,
                 "start_date": start_date,
                 "end_date": end_date,
-                "termination_parity": termination_parity and termination_parity.lower(),
+                "termination_parity": termination_parity,
             },
         )
         flat_result = cur.fetchall()
@@ -301,7 +301,7 @@ async def game_length_by_title(
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
-                    UNION
+                    UNION ALL
                     SELECT 
                         p.title as title,
                         g.game_length as game_length,
@@ -311,8 +311,8 @@ async def game_length_by_title(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 title,
@@ -364,9 +364,9 @@ async def result_percentages_by_country():
             """
             SELECT 
                 country,
-                100 * AVG(wins / num_games) as win_percentage,
-                100 * AVG(draws / num_games) as draw_percentage,
-                100 * AVG(losses / num_games) as loss_percentage
+                100 * AVG(wins / (wins+draws+losses)) as win_percentage,
+                100 * AVG(draws / (wins+draws+losses)) as draw_percentage,
+                100 * AVG(losses / (wins+draws+losses)) as loss_percentage
             FROM Player
             GROUP BY country
             """
@@ -410,7 +410,7 @@ async def completion_rate_by_country(
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
-                    UNION
+                    UNION ALL
                     SELECT 
                         p.country as country,
                         p.username as username,
@@ -424,8 +424,8 @@ async def completion_rate_by_country(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 t.country as country,
@@ -495,7 +495,7 @@ async def termination_type_by_country(
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
-                    UNION
+                    UNION ALL
                     SELECT 
                         p.country as country,
                         p.username as username,
@@ -510,19 +510,19 @@ async def termination_type_by_country(
                 WHERE 
                     (
                         %(termination_parity)s IS NULL
-                        OR %(termination_parity)s = 'win' 
+                        OR %(termination_parity)s = 'Win' 
                             AND t.white_username = t.username AND t.result = '1-0'
-                        OR %(termination_parity)s = 'loss' 
+                        OR %(termination_parity)s = 'Loss' 
                             AND t.white_username = t.username AND t.result = '0-1'
-                        OR %(termination_parity)s = 'win' 
+                        OR %(termination_parity)s = 'Win' 
                             AND t.black_username = t.username AND t.result = '0-1'
-                        OR %(termination_parity)s = 'loss' 
+                        OR %(termination_parity)s = 'Loss' 
                             AND t.black_username = t.username AND t.result = '1-0'
-                        OR %(termination_parity)s = 'draw' AND t.result = '1/2-1/2'
+                        OR %(termination_parity)s = 'Draw' AND t.result = '1/2-1/2'
                     )
                     AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             ),
             ProfileGameCount as (
                 SELECT username, COUNT(*) as count FROM ProfileGame
@@ -538,7 +538,7 @@ async def termination_type_by_country(
                     g.termination as termination,
                     100 * COUNT(*) / c.count as percentage
                 FROM ProfileGame g INNER JOIN ProfileGameCount c ON g.username = c.username
-                GROUP BY g.username, g.country, g.termination
+                GROUP BY g.username, c.count, g.country, g.termination
             ) t
             GROUP BY t.country, t.termination
             """,
@@ -546,14 +546,13 @@ async def termination_type_by_country(
                 "game_type": game_type,
                 "start_date": start_date,
                 "end_date": end_date,
-                "termination_parity": termination_parity and termination_parity.lower(),
+                "termination_parity": termination_parity,
             },
         )
         flat_result = cur.fetchall()
 
     result = defaultdict(list)
     for r in flat_result:
-        print(r["termination"])
         result[r["country"]].append(
             {
                 "termination_type": r["termination"],
@@ -599,7 +598,7 @@ async def game_length_by_country(
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
-                    UNION
+                    UNION ALL
                     SELECT 
                         p.country as country,
                         g.game_length as game_length,
@@ -609,8 +608,8 @@ async def game_length_by_country(
                 ) t
                 WHERE 
                     (%(game_type)s IS NULL OR %(game_type)s = t.category)
-                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
-                    AND (%(end_date)s IS NULL OR t.start_timestamp <= %(end_date)s)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(t.start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(t.start_timestamp) <= %(end_date)s)
             )
             SELECT
                 country,
@@ -626,5 +625,4 @@ async def game_length_by_country(
             },
         )
         result = cur.fetchall()
-
     return {"countries": result}

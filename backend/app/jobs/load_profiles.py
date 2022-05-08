@@ -7,7 +7,7 @@ from datetime import datetime
 import aiohttp
 from tqdm import tqdm
 
-from app.database.connect import get_async_db_connection, get_db_connection
+from app.database.connect import get_async_db_pool, get_db_connection
 from app.load_data_helpers.get_games_files import get_games_files
 from app.sql.statements import upsert_player
 
@@ -30,52 +30,6 @@ parser.add_argument(
     type=int,
     default=1,
     help=("The number of profile consumer tasks (committing profiles to the db)."),
-)
-
-parser.add_argument(
-    "--from-games-db",
-    "-d",
-    action="store_true",
-    help=("Use this flag to usernames from the Game table of the db instead of game files."),
-)
-
-parser.add_argument(
-    "--from-date",
-    type=str,
-    default=None,
-    help=(
-        "The date of the earliest game file to get usernames from, "
-        "of the form YYYY-MM (defaults to the beginning of lichess's game history)."
-    ),
-)
-
-parser.add_argument(
-    "--to-date",
-    type=str,
-    default=None,
-    help=(
-        "The date of the latest game file to get usernames from, "
-        "of the form YYYY-MM (defaults to the end of lichess's game history)."
-    ),
-)
-
-parser.add_argument(
-    "--ascending",
-    action="store_true",
-    help=(
-        "Use this flag to load game files in ascending chronological order "
-        "(default behavior is to load files in reverse chronological order)."
-    ),
-)
-
-parser.add_argument(
-    "--save-files",
-    "-s",
-    action="store_true",
-    help=(
-        "Use this flag to prevent game files from being deleted from the /tmp directory "
-        "after being downloaded (to speed up future runs)."
-    ),
 )
 
 parser.add_argument(
@@ -133,18 +87,17 @@ existing_usernames = get_existing_usernames()
 username_re = re.compile(r'^\[(?:White|Black) "(.+)"\]$')
 
 
-async def username_producer(game_file, username_queue):
-    for i, line in enumerate(game_file):
-        match = username_re.match(line)
-        if not match:
-            continue
-        username = match.group(1)
-        if username in existing_usernames:
-            continue
-        existing_usernames.add(username)
-        if i % args.num_workers != args.worker_num:
-            continue
-        await username_queue.put(username)
+async def username_producer(username_queue):
+    while True:
+        no_new_usernames = True
+        for i, username in enumerate(get_games_db_usernames()):
+            existing_usernames.add(username)
+            if i % args.num_workers != args.worker_num:
+                continue
+            no_new_usernames = False
+            await username_queue.put(username)
+        if no_new_usernames:
+            break
     await username_queue.put(None)
 
 
@@ -241,7 +194,7 @@ async def profile_producer(username_queue, profile_queue):
 
 
 async def profile_consumer(queue, pbar):
-    pool = await get_async_db_connection()
+    pool = await get_async_db_pool()
 
     async with pool.acquire() as conn:
         while True:
@@ -257,9 +210,11 @@ async def profile_consumer(queue, pbar):
     await pool.wait_closed()
 
 
-async def load_profiles(username_queue, username_producer_task):
+async def load_profiles():
+    username_queue = asyncio.Queue(maxsize=args.queue_limit)
     profile_queue = asyncio.Queue(maxsize=args.queue_limit)
     with tqdm() as pbar:
+        username_producer_task = asyncio.create_task(username_producer(username_queue))
         profile_producer_task = asyncio.create_task(profile_producer(username_queue, profile_queue))
         profile_consumer_tasks = [
             asyncio.create_task(profile_consumer(profile_queue, pbar))
@@ -275,41 +230,7 @@ async def load_profiles(username_queue, username_producer_task):
         await profile_queue.join()
 
 
-async def load_profiles_orch():
-    username_queue = asyncio.Queue(maxsize=args.queue_limit)
-
-    if args.from_games_db:
-
-        async def trivial_username_producer():
-            while True:
-                no_new_usernames = True
-                for i, username in enumerate(get_games_db_usernames()):
-                    existing_usernames.add(username)
-                    if i % args.num_workers != args.worker_num:
-                        continue
-                    no_new_usernames = False
-                    await username_queue.put(username)
-                if no_new_usernames:
-                    break
-            await username_queue.put(None)
-
-        username_producer_task = asyncio.create_task(trivial_username_producer())
-        await load_profiles(username_queue, username_producer_task)
-    else:
-        for game_file_context in get_games_files(
-            from_date=args.from_date,
-            to_date=args.to_date,
-            ascending=args.ascending,
-            save_files=args.save_files,
-        ):
-            with game_file_context() as game_file:
-                username_producer_task = asyncio.create_task(
-                    username_producer(game_file, username_queue)
-                )
-                await load_profiles(username_queue, username_producer_task)
-
-
 selector = selectors.SelectSelector()
 loop = asyncio.SelectorEventLoop(selector)
 asyncio.set_event_loop(loop)
-asyncio.run(load_profiles_orch())
+asyncio.run(load_profiles())

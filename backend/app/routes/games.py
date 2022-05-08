@@ -9,10 +9,9 @@ from app.database.util import GameType
 from app.models.games import *
 from app.models.profile import CountryDistribution
 import pymysql.cursors
+from app.database.connect import get_db_connection, get_dict_cursor
 
 router = APIRouter()
-
-from app.database.connect import get_db_connection, get_dict_cursor
 
 dict_cursor = get_dict_cursor(get_db_connection())
 
@@ -32,7 +31,6 @@ async def title_distribution():
             """
         )
         result = cur.fetchall()
-    print(result)
     return {"dates": result}
 
 
