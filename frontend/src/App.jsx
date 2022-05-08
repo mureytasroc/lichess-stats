@@ -12,12 +12,13 @@ const { Content, Sider } = Layout;
 
 function App() {
   const content = [
+    Charts.GameTimeDistribution,
+    Charts.CastlingPercentage,
     Charts.TitleDistribution,
     Charts.CompletionRateDistribution,
     Charts.ResultPercentageDistribution,
     Charts.GameTerminationDistribution,
     Charts.GameLengthDistribution,
-    // Charts.CountryDistribution,
   ];
   const [collapse, setCollapse] = useState(false);
   const [currPage, setCurrPage] = useState(0);

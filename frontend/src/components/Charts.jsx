@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Bar } from "@ant-design/plots";
+import { Statistic } from "antd";
+import { Bar, Line } from "@ant-design/plots";
 import { doApiRequest } from "../utils/fetch";
 import {
   GameTypeSelector,
   DaySelector,
   TitleCountrySelector,
   SlicerSelector,
+  UsernameSelector,
 } from "../utils/selectors";
 
 const NULL_NAME = "no title";
@@ -389,7 +391,6 @@ function GameLengthDistributionChart() {
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
       const result = await doApiRequest(`/profile/${type}/game-length`, params);
-      console.log(result);
       if (type === "title") {
         setUnSlicedData(
           result.titles.sort((a, b) => b.avg_game_length - a.avg_game_length)
@@ -454,36 +455,62 @@ export const GameLengthDistribution = {
   group: "Profile",
 };
 
-function CountryDistributionChart() {
+function GameTimeDistributionChart() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest("/profile/country/distribution");
-      const transformedResult = result.countries.map((entry) => ({
-        ...entry,
-        title: entry.title || NULL_NAME,
-      }));
-      setData(transformedResult.sort((a, b) => b.count - a.count).slice(0, 10));
+      const result = await doApiRequest("/games/date-distribution");
+      console.log(result.dates);
+      setData(result.dates);
     })();
   }, []);
 
   return (
     <>
-      <Bar
-        data={data}
-        xField="count"
-        yField="country"
-        seriesField="country"
-        autoFit
-        yAxis={{ max: 1000 }}
-      />
+      <Line data={data} xField="start_date" yField="count" autoFit />
     </>
   );
 }
+export const GameTimeDistribution = {
+  title: "Game Times",
+  content: <GameTimeDistributionChart />,
+  group: "Game",
+};
 
-export const CountryDistribution = {
-  title: "Countries",
-  content: <CountryDistributionChart />,
-  group: "Profile",
+function CastlingPercentageChart() {
+  const [data, setData] = useState([{}]);
+  const [username, setUsername] = useState("ChaShu");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const result = await doApiRequest("/games/CastlingPercentage", {
+        username,
+      });
+
+      setData(result.players);
+      setLoading(false);
+    })();
+  }, [username]);
+
+  return (
+    <>
+      <Statistic
+        title={`Castling Percentage by ${username}`}
+        loading={loading}
+        value={
+          data[0] && data[0].CastlingPercentage
+            ? data[0].CastlingPercentage + "%"
+            : "user not found"
+        }
+      />
+      <UsernameSelector onSearch={setUsername} />
+    </>
+  );
+}
+export const CastlingPercentage = {
+  title: "Castling Percentage",
+  content: <CastlingPercentageChart />,
+  group: "Game",
 };

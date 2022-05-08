@@ -1,7 +1,8 @@
-import React from "react";
-import { Select, DatePicker, Slider } from "antd";
+import React, { useEffect } from "react";
+import { Select, DatePicker, Slider, Input } from "antd";
 
 const { Option } = Select;
+const { Search } = Input;
 
 export function GameTypeSelector({ handleChange }) {
   return (
@@ -38,5 +39,17 @@ export function SlicerSelector({ length, handleChange }) {
         <Slider min={0} max={length - 10} onChange={handleChange} />
       </div>
     </div>
+  );
+}
+
+export function UsernameSelector({ onSearch }) {
+  return (
+    <Search
+      placeholder="input username"
+      allowClear
+      enterButton="Search"
+      size="large"
+      onSearch={onSearch}
+    />
   );
 }

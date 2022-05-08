@@ -16,11 +16,12 @@ export default function MenuBar({ content, scroll }) {
       label: "Profile",
       children: [
         ...content
-          .filter((e) => e.group === "Profile")
-          .map(({ title }, index) => ({
+          .map(({ title, group }, index) => ({
             key: index,
             label: title,
-          })),
+            group,
+          }))
+          .filter((e) => e.group === "Profile"),
       ],
       icon: <Icon component={WinnerIcon} />,
     },
@@ -29,11 +30,12 @@ export default function MenuBar({ content, scroll }) {
       label: "Game",
       children: [
         ...content
-          .filter((e) => e.group === "Game")
-          .map(({ title }, index) => ({
+          .map(({ title, group }, index) => ({
             key: index,
             label: title,
-          })),
+            group,
+          }))
+          .filter((e) => e.group === "Game"),
       ],
       icon: <Icon component={ClockIcon} />,
     },
@@ -42,16 +44,16 @@ export default function MenuBar({ content, scroll }) {
       label: "Rating",
       children: [
         ...content
-          .filter((e) => e.group === "Rating")
-          .map(({ title }, index) => ({
+          .map(({ title, group }, index) => ({
             key: index,
             label: title,
-          })),
+            group,
+          }))
+          .filter((e) => e.group === "Rating"),
       ],
       icon: <Icon component={RatingIcon} />,
     },
   ];
-
   const [openKeys, setOpenKeys] = useState([]);
   useEffect(() => {
     if (content && content[scroll - 1]) {
