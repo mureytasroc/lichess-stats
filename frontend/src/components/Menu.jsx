@@ -12,6 +12,20 @@ export default function MenuBar({ content, scroll }) {
       icon: <Icon component={ChessIcon} />,
     },
     {
+      key: "Rating",
+      label: "Rating",
+      children: [
+        ...content
+          .map(({ title, group }, index) => ({
+            key: index,
+            label: title,
+            group,
+          }))
+          .filter((e) => e.group === "Rating"),
+      ],
+      icon: <Icon component={RatingIcon} />,
+    },
+    {
       key: "Profile",
       label: "Profile",
       children: [
@@ -38,20 +52,6 @@ export default function MenuBar({ content, scroll }) {
           .filter((e) => e.group === "Game"),
       ],
       icon: <Icon component={ClockIcon} />,
-    },
-    {
-      key: "Rating",
-      label: "Rating",
-      children: [
-        ...content
-          .map(({ title, group }, index) => ({
-            key: index,
-            label: title,
-            group,
-          }))
-          .filter((e) => e.group === "Rating"),
-      ],
-      icon: <Icon component={RatingIcon} />,
     },
   ];
   const [openKeys, setOpenKeys] = useState([]);
