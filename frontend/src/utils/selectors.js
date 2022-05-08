@@ -18,6 +18,26 @@ export function GameTypeSelector({ handleChange }) {
   );
 }
 
+export function RatingTypeSelector({ handleChange }) {
+  return (
+    <Select
+      defaultValue="Bullet"
+      style={{ width: 120 }}
+      onChange={handleChange}
+    >
+      <Option value="UltraBullet">UltraBullet</Option>
+      <Option value="Bullet">Bullet</Option>
+      <Option value="Blitz">Blitz</Option>
+      <Option value="Rapid">Rapid</Option>
+      <Option value="Classical">Classical</Option>
+      <Option value="Correspondence">Correspondence</Option>
+      <Option value="FIDE">FIDE</Option>
+      <Option value="USCF">USCF</Option>
+      <Option value="ECF">ECF</Option>
+    </Select>
+  );
+}
+
 export function DaySelector({ handleChange }) {
   return <DatePicker onChange={(_, e) => handleChange(e)} />;
 }
