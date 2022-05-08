@@ -86,7 +86,7 @@ class GameLengthByTitleEntry(TitleEntry):
         description="The average game length (number of moves) played by players with this title.",
     )
     stddev_game_length: Optional[float] = Field(
-        ge=1,
+        ge=0,
         description="The standard deviation of game lengths (number of moves) played by players with this title.",  # noqa: E501
     )
 
@@ -179,7 +179,7 @@ class GameLengthByCountryEntry(CountryEntry):
         description="The average game length (number of moves) played by players from this country.",  # noqa: E501
     )
     stddev_game_length: Optional[float] = Field(
-        ge=1,
+        ge=0,
         description="The standard deviation of game lengths (number of moves) played by players from this country.",  # noqa: E501
     )
 

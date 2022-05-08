@@ -189,7 +189,7 @@ async def termination_type_by_title(
                 SELECT
                     g.title as title,
                     g.termination as termination,
-                    COUNT(*) / c.count as percentage
+                    100 * COUNT(*) / c.count as percentage
                 FROM ProfileGame g INNER JOIN ProfileGameCount c ON g.username = c.username
                 GROUP BY g.username, g.title, g.termination
             ) t
@@ -242,20 +242,18 @@ async def game_length_by_title(
     with dict_cursor() as cur:
         cur.execute(
             """
-            ProfileGame as (
+            WITH ProfileGame as (
                 SELECT * FROM (
                     SELECT 
                         p.title as title,
-                        p.username as username,
-                        g.lichess_id as lichess_id,
+                        g.game_length as game_length,
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.white_username = p.username
                     UNION
                     SELECT 
                         p.title as title,
-                        p.username as username,
-                        g.lichess_id as lichess_id,
+                        g.game_length as game_length,
                         g.category as category,
                         g.start_timestamp as start_timestamp
                     FROM Game g INNER JOIN Player p ON g.black_username = p.username
@@ -266,17 +264,11 @@ async def game_length_by_title(
                     AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
             )
             SELECT
-                t.title as title,
-                AVG(t.length) as avg_length,
-                STDDEV(t.length) as stddev_length
-            FROM (
-                SELECT
-                    g.title as title,
-                    COUNT() as length
-                FROM ProfileGame g INNER JOIN GameMove m ON g.lichess_id = m.game_id
-                GROUP BY g.title, g.username, g.lichess_id
-            ) t
-            GROUP BY t.title
+                title,
+                AVG(game_length) as avg_game_length,
+                STDDEV(game_length) as stddev_game_length
+            FROM ProfileGame
+            GROUP BY title
             """,
             {
                 "game_type": game_type_case(game_type),
@@ -290,8 +282,8 @@ async def game_length_by_title(
         "titles": [
             {
                 "title": r["title"],
-                "avg_game_length": r["avg_length"],
-                "stddev_game_length": r["stddev_length"],
+                "avg_game_length": r["avg_game_length"],
+                "stddev_game_length": r["stddev_game_length"],
             }
             for r in result
         ],
@@ -307,15 +299,16 @@ async def game_length_by_title(
     response_model=CountryDistribution,
 )
 async def country_distribution():
-    # TODO
-    return {
-        "countries": [
-            {
-                "country": "US",
-                "count": 10000,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            SELECT country, COUNT(*) as count
+            FROM Player
+            GROUP BY country
+            """
+        )
+        result = cur.fetchall()
+    return {"countries": result}
 
 
 @router.get(
@@ -324,16 +317,19 @@ async def country_distribution():
     response_model=CompletionRateByCountry,
 )
 async def completion_rate_by_country():
-    # TODO
-    return {
-        "countries": [
-            {
-                "country": "US",
-                "avg_completion_rate": 80,
-                "stddev_completion_rate": 10,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            SELECT 
+                country,
+                AVG(completion_rate) as avg_completion_rate,
+                STDDEV(completion_rate) as stddev_completion_rate
+            FROM Player
+            GROUP BY country
+            """
+        )
+        result = cur.fetchall()
+    return {"countries": result}
 
 
 @router.get(
@@ -342,17 +338,20 @@ async def completion_rate_by_country():
     response_model=ResultPercentagesByCountry,
 )
 async def result_percentages_by_country():
-    # TODO
-    return {
-        "countries": [
-            {
-                "country": "US",
-                "win_percentage": 80,
-                "draw_percentage": 80,
-                "loss_percentage": 80,
-            }
-        ]
-    }
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            SELECT 
+                country,
+                100 * AVG(wins / num_games) as win_percentage,
+                100 * AVG(draws / num_games) as draw_percentage,
+                100 * AVG(losses / num_games) as loss_percentage
+            FROM Player
+            GROUP BY country
+            """
+        )
+        result = cur.fetchall()
+    return {"countries": result}
 
 
 @router.get(
@@ -361,6 +360,10 @@ async def result_percentages_by_country():
     response_model=GameTerminationTypeByCountry,
 )
 async def termination_type_by_country(
+    termination_parity: Optional[TerminationParity] = Query(
+        default=None,
+        description="Optionally, specify the parity of the result (win, draw, or loss) from the perspective of the player from the relevant country.",  # noqa: E501
+    ),
     game_type: Optional[GameType] = Query(
         default=None, description="Optionally, specify a game type to analyze."
     ),
@@ -375,17 +378,91 @@ async def termination_type_by_country(
         description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
     ),
 ):
-    # TODO
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH ProfileGame as (
+                SELECT * FROM (
+                    SELECT 
+                        p.country as country,
+                        p.username as username,
+                        g.white_username as white_username,
+                        g.black_username as black_username,
+                        g.termination as termination,
+                        g.result as result,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    UNION
+                    SELECT 
+                        p.country as country,
+                        p.username as username,
+                        g.white_username as white_username,
+                        g.black_username as black_username,
+                        g.termination as termination,
+                        g.result as result,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.black_username = p.username
+                ) t
+                WHERE 
+                    (
+                        %(termination_parity)s IS NULL
+                        OR %(termination_parity)s = 'win' 
+                            AND t.white_username = t.username AND t.result = '1-0'
+                        OR %(termination_parity)s = 'loss' 
+                            AND t.white_username = t.username AND t.result = '0-1'
+                        OR %(termination_parity)s = 'win' 
+                            AND t.black_username = t.username AND t.result = '0-1'
+                        OR %(termination_parity)s = 'loss' 
+                            AND t.black_username = t.username AND t.result = '1-0'
+                        OR %(termination_parity)s = 'draw' AND t.result = '1/2-1/2'
+                    )
+                    AND (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+            ),
+            ProfileGameCount as (
+                SELECT username, COUNT(*) as count FROM ProfileGame
+                GROUP BY username
+            )
+            SELECT
+                t.country as country,
+                t.termination as termination,
+                AVG(t.percentage) as avg_percentage
+            FROM (
+                SELECT
+                    g.country as country,
+                    g.termination as termination,
+                    100 * COUNT(*) / c.count as percentage
+                FROM ProfileGame g INNER JOIN ProfileGameCount c ON g.username = c.username
+                GROUP BY g.username, g.country, g.termination
+            ) t
+            GROUP BY t.country, t.termination
+            """,
+            {
+                "game_type": game_type_case(game_type),
+                "start_date": start_date,
+                "end_date": exclusive_end_date(end_date),
+                "termination_parity": termination_parity and termination_parity.lower(),
+            },
+        )
+        flat_result = cur.fetchall()
+
+    result = defaultdict(list)
+    for r in flat_result:
+        print(r["termination"])
+        result[r["country"]].append(
+            {
+                "termination_type": r["termination"],
+                "percentage": r["avg_percentage"],
+            }
+        )
+
     return {
         "countries": [
-            {
-                "country": "US",
-                "normal_percentage": 80,
-                "resignation_percentage": 80,
-                "time_forfeit_percentage": 80,
-                "abandoned_percentage": 80,
-            }
-        ]
+            {"country": country, "termination_types": result[country]} for country in result
+        ],
     }
 
 
@@ -409,13 +486,52 @@ async def game_length_by_country(
         description="Optionally, specify an end month of games to analyze (inclusive), of the form YYYY-MM.",  # noqa: E501
     ),
 ):
-    # TODO
+    with dict_cursor() as cur:
+        cur.execute(
+            """
+            WITH ProfileGame as (
+                SELECT * FROM (
+                    SELECT 
+                        p.country as country,
+                        g.game_length as game_length,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    UNION
+                    SELECT 
+                        p.country as country,
+                        g.game_length as game_length,
+                        g.category as category,
+                        g.start_timestamp as start_timestamp
+                    FROM Game g INNER JOIN Player p ON g.black_username = p.username
+                ) t
+                WHERE 
+                    (%(game_type)s IS NULL OR %(game_type)s = t.category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= t.start_timestamp)
+                    AND (%(end_date)s IS NULL OR t.start_timestamp < %(end_date)s)
+            )
+            SELECT
+                country,
+                AVG(game_length) as avg_game_length,
+                STDDEV(game_length) as stddev_game_length
+            FROM ProfileGame
+            GROUP BY country
+            """,
+            {
+                "game_type": game_type_case(game_type),
+                "start_date": start_date,
+                "end_date": exclusive_end_date(end_date),
+            },
+        )
+        result = cur.fetchall()
+
     return {
         "countries": [
             {
-                "country": "US",
-                "avg_game_length": 30,
-                "stddev_game_length": 10,
+                "country": r["country"],
+                "avg_game_length": r["avg_game_length"],
+                "stddev_game_length": r["stddev_game_length"],
             }
-        ]
+            for r in result
+        ],
     }
