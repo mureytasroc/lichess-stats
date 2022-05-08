@@ -13,13 +13,16 @@ const { Content, Sider } = Layout;
 function App() {
   const content = [
     Charts.TitleDistribution,
-    // Charts.CompletionRateDistribution,
+    Charts.CompletionRateDistribution,
     Charts.ResultPercentageDistribution,
     Charts.GameTerminationDistribution,
+    Charts.GameLengthDistribution,
+    // Charts.CountryDistribution,
   ];
   const [collapse, setCollapse] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
+  const [currPage, setCurrPage] = useState(0);
   const [menuScroll, setMenuScroll] = useState(0);
+  const [loadPages, setLoadPages] = useState(new Set());
 
   const currScroll = useRef(0);
   const currMenuScroll = useRef(0);
@@ -31,8 +34,8 @@ function App() {
         setMenuScroll(currScreen);
         currMenuScroll.current = currScreen;
       }
-      if (currScreen > currScroll.current) {
-        setScrollPosition(currScreen);
+      if (currScreen !== currScroll.current) {
+        setCurrPage(currScreen);
         currScroll.current = Math.floor(currScreen);
       }
     };
@@ -41,6 +44,12 @@ function App() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  useEffect(() => {
+    const nextLoad = new Set(loadPages);
+    nextLoad.add(currPage - 1);
+    nextLoad.add(currPage);
+    if (nextLoad.size > loadPages.size) setLoadPages(nextLoad);
+  }, [currPage]);
   return (
     <Layout
       className="App"
@@ -77,7 +86,7 @@ function App() {
               title={element.title}
               floating
             >
-              {scrollPosition >= index ? element.content : null}
+              {loadPages.has(index) ? element.content : null}
             </Screen>
           ))}
           <div style={{ height: 10, width: 300 }} />

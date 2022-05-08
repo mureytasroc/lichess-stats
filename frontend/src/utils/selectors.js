@@ -1,4 +1,5 @@
-import { Select, DatePicker } from "antd";
+import React from "react";
+import { Select, DatePicker, Slider } from "antd";
 
 const { Option } = Select;
 
@@ -16,6 +17,26 @@ export function GameTypeSelector({ handleChange }) {
   );
 }
 
-export function MonthYearSelector({ handleChange }) {
-  return <DatePicker onChange={(_, e) => handleChange(e)} picker="month" />;
+export function DaySelector({ handleChange }) {
+  return <DatePicker onChange={(_, e) => handleChange(e)} />;
+}
+
+export function TitleCountrySelector({ handleChange }) {
+  return (
+    <Select defaultValue="title" style={{ width: 120 }} onChange={handleChange}>
+      <Option value="title">Title</Option>
+      <Option value="country">Country</Option>
+    </Select>
+  );
+}
+
+export function SlicerSelector({ length, handleChange }) {
+  return (
+    <div style={{ display: "flex", width: "100%" }}>
+      <div style={{ width: "20%" }}>Country Selector</div>
+      <div style={{ width: "80%" }}>
+        <Slider min={0} max={length - 10} onChange={handleChange} />
+      </div>
+    </div>
+  );
 }
