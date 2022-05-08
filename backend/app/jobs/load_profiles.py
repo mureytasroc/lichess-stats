@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from app.database.connect import get_async_db_connection, get_db_connection
 from app.load_data_helpers.get_games_files import get_games_files
-from app.sql.statements import upsert_players
+from app.sql.statements import upsert_player
 
 
 parser = argparse.ArgumentParser(description="Load user profiles from https://lichess.org/api.")
@@ -249,7 +249,7 @@ async def profile_consumer(queue, pbar):
             if tup is None:
                 break
             async with conn.cursor() as cur:
-                await cur.execute(upsert_players, tup)
+                await cur.execute(upsert_player, tup)
             await conn.commit()
             pbar.update(1)
 
