@@ -16,8 +16,8 @@ spec:
             containers:
                 - name: {{ .Release.Name }}-backend
                   image: '{{ .Values.backend.image }}:{{ .Values.application.gitSHA }}'
-                  command: ["gunicorn"]
-                  args: ["-k", "uvicorn.workers.UvicornWorker", "main:app"]
+                  command: ["uvicorn"]
+                  args: ["app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "{{ .Values.backend.port }}"]
                   ports:
                       - containerPort: {{ .Values.backend.port }}
                   env:
