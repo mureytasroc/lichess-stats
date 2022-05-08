@@ -11,6 +11,7 @@ from app.database.util import (
     convert_country_codes,
     country_codes,
     title_to_desc,
+    convert_to_float,
 )
 from app.models.profile import (
     CompletionRateByCountry,
@@ -63,7 +64,7 @@ async def title_distribution():
             """
         )
         result = cur.fetchall()
-    return {"titles": result}
+    return {"titles": convert_to_float(result)}
 
 
 @router.get(
@@ -86,7 +87,7 @@ async def result_percentages_by_title():
             """
         )
         result = cur.fetchall()
-    return {"titles": result}
+    return {"titles": convert_to_float(result)}
 
 
 @router.get(
@@ -110,7 +111,7 @@ async def result_counts_by_title():
             """
         )
         result = cur.fetchall()
-    return {"titles": result}
+    return {"titles": convert_to_float(result)}
 
 
 @router.get(
@@ -192,7 +193,7 @@ async def completion_rate_by_title(
             },
         )
         result = cur.fetchall()
-    return {"titles": result}
+    return {"titles": convert_to_float(result)}
 
 
 @router.get(
@@ -301,7 +302,10 @@ async def termination_type_by_title(
         )
 
     return {
-        "titles": [{"title": title, "termination_types": result[title]} for title in result],
+        "titles": [
+            {"title": title, "termination_types": result[title]}
+            for title in convert_to_float(result)
+        ],
     }
 
 
@@ -365,7 +369,7 @@ async def game_length_by_title(
         )
         result = cur.fetchall()
 
-    return {"titles": result}
+    return {"titles": convert_to_float(result)}
 
 
 # Countries
@@ -387,7 +391,7 @@ async def country_distribution():
             """
         )
         result = cur.fetchall()
-    return {"countries": convert_country_codes(result)}
+    return {"countries": convert_country_codes(convert_to_float(result))}
 
 
 @router.get(
@@ -411,7 +415,7 @@ async def result_percentages_by_country():
             """
         )
         result = cur.fetchall()
-    return {"countries": convert_country_codes(result)}
+    return {"countries": convert_country_codes(convert_to_float(result))}
 
 
 @router.get(
@@ -435,7 +439,7 @@ async def result_counts_by_country():
             """
         )
         result = cur.fetchall()
-    return {"countries": convert_country_codes(result)}
+    return {"countries": convert_country_codes(convert_to_float(result))}
 
 
 @router.get(
@@ -517,7 +521,7 @@ async def completion_rate_by_country(
             },
         )
         result = cur.fetchall()
-    return {"countries": convert_country_codes(result)}
+    return {"countries": convert_country_codes(convert_to_float(result))}
 
 
 @router.get(
@@ -628,7 +632,7 @@ async def termination_type_by_country(
     return {
         "countries": [
             {"country": country_codes.get(country, country), "termination_types": result[country]}
-            for country in result
+            for country in convert_to_float(result)
         ],
     }
 
@@ -692,4 +696,4 @@ async def game_length_by_country(
             },
         )
         result = cur.fetchall()
-    return {"countries": convert_country_codes(result)}
+    return {"countries": convert_country_codes(convert_to_float(result))}

@@ -5,7 +5,13 @@ from fastapi import APIRouter, Path, Query
 from fastapi_redis_cache import cache
 
 from app.database.connect import get_db_connection, get_dict_cursor
-from app.database.util import GameType, RatingType, TerminationParity, get_rating_col
+from app.database.util import (
+    GameType,
+    RatingType,
+    TerminationParity,
+    get_rating_col,
+    convert_to_float,
+)
 from app.models.rating import (
     CastlingRateByRating,
     CompletionRateByRating,
@@ -56,7 +62,7 @@ async def distribution(
             {"bin_size": bin_size},
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -93,7 +99,7 @@ async def compare(
             {"bin_size": bin_size},
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -118,7 +124,7 @@ async def title(
             """,
         )
         result = cur.fetchall()
-    return {"titles": result}
+    return {"titles": convert_to_float(result)}
 
 
 @router.get(
@@ -143,7 +149,7 @@ async def country(
             """,
         )
         result = cur.fetchall()
-    return {"countries": result}
+    return {"countries": convert_to_float(result)}
 
 
 @router.get(
@@ -173,7 +179,7 @@ async def play_time(
             {"bin_size": bin_size},
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -202,7 +208,7 @@ async def percent_patron(
             {"bin_size": bin_size},
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -231,7 +237,7 @@ async def percent_tos_violators(
             {"bin_size": bin_size},
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -262,7 +268,7 @@ async def cumulative_result_percentages(
             {"bin_size": bin_size},
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -332,7 +338,7 @@ async def completion_rate(
             },
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -412,7 +418,7 @@ async def castling_percentage(
             },
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -490,7 +496,7 @@ async def result_percentages(
             },
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -545,7 +551,7 @@ async def result_percentages_2d(
             },
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -610,7 +616,7 @@ async def game_length(
             },
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -688,7 +694,7 @@ async def num_openings(
             },
         )
         result = cur.fetchall()
-    return {"bins": result}
+    return {"bins": convert_to_float(result)}
 
 
 @router.get(
@@ -794,6 +800,6 @@ async def termination_type(
                 "rating_max": rating_max,
                 "termination_types": result[rating_min, rating_max],
             }
-            for rating_min, rating_max in result
+            for rating_min, rating_max in convert_to_float(result)
         ],
     }
