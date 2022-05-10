@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from fastapi_redis_cache import cache
 
-from app.database.connect import get_db_connection, get_dict_cursor
+from app.database.connect import get_dict_cursor
 from app.database.util import (
     GameType,
     TerminationParity,
@@ -32,7 +32,7 @@ from app.models.profile import (
 
 router = APIRouter()
 
-dict_cursor = get_dict_cursor(get_db_connection())
+dict_cursor = get_dict_cursor()
 
 
 # Titles

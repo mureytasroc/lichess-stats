@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import ReactDOM from "react-dom";
 import { Statistic } from "antd";
 import { Bar, Line, Column, Heatmap } from "@ant-design/plots";
-import { doApiRequest } from "../utils/fetch";
+import doApiRequest from "../utils/fetch";
 import {
   GameTypeSelector,
   DaySelector,
@@ -21,7 +20,7 @@ function TitleDistributionChart() {
   const [type, setType] = useState("title");
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/profile/${type}/distribution`);
+      const result = await doApiRequest(`/api/profile/${type}/distribution`);
       if (type === "title") {
         setUnSlicedData(result.titles);
       } else {
@@ -101,7 +100,7 @@ function CompletionRateDistributionChart() {
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
       const result = await doApiRequest(
-        `/profile/${type}/completion-rate`,
+        `/api/profile/${type}/completion-rate`,
         params
       );
       if (type === "title") {
@@ -181,7 +180,7 @@ function ResultPercentageDistributionChart() {
 
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/profile/${type}/results`);
+      const result = await doApiRequest(`/api/profile/${type}/results`);
       if (type === "title") {
         setUnSlicedData(result.titles);
       } else {
@@ -287,7 +286,7 @@ function ResultCountDistributionChart() {
 
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/profile/${type}/results/counts`);
+      const result = await doApiRequest(`/api/profile/${type}/results/counts`);
       if (type === "title") {
         setUnSlicedData(result.titles);
       } else {
@@ -398,7 +397,7 @@ function GameTerminationDistributionChart() {
       if (endDay && endDay.length > 0) params.end_date = endDay;
 
       const result = await doApiRequest(
-        `/profile/${type}/termination-type`,
+        `/api/profile/${type}/termination-type`,
         params
       );
       if (type === "title") {
@@ -491,7 +490,7 @@ function GameLengthDistributionChart() {
       if (gameType !== "All") params.game_type = gameType;
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
-      const result = await doApiRequest(`/profile/${type}/game-length`, params);
+      const result = await doApiRequest(`/api/profile/${type}/game-length`, params);
       if (type === "title") {
         setUnSlicedData(
           result.titles.sort((a, b) => b.avg_game_length - a.avg_game_length)
@@ -561,7 +560,7 @@ function GameTimeDistributionChart() {
 
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest("/games/date-distribution");
+      const result = await doApiRequest("/api/games/date-distribution");
       setData(result.dates);
     })();
   }, []);
@@ -589,7 +588,7 @@ function CastlingPercentageChart() {
       if (gameType !== "All") params.game_type = gameType;
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
-      const result = await doApiRequest("/games/castling-percentage", {
+      const result = await doApiRequest("/api/games/castling-percentage", {
         username,
         ...params,
       });
@@ -633,7 +632,7 @@ function CastlingTypePercentageChart() {
     (async () => {
       setLoading(true);
 
-      const result = await doApiRequest("/games/RatioKtoQ", {
+      const result = await doApiRequest("/api/games/RatioKtoQ", {
         username,
       });
       setData(result.players);
@@ -671,7 +670,7 @@ function TimeToWinChart() {
     (async () => {
       setLoading(true);
 
-      const result = await doApiRequest("/games/AvgTimeToWin", {
+      const result = await doApiRequest("/api/games/AvgTimeToWin", {
         username,
       });
       setData(result.players);
@@ -705,7 +704,7 @@ function RatingDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/rating/${ratingType}/distribution`, {
+      const result = await doApiRequest(`/api/rating/${ratingType}/distribution`, {
         bin_size: 100,
       });
       setData(result.bins);
@@ -731,7 +730,7 @@ function RatingCompareDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/rating/${ratingType}/compare`, {
+      const result = await doApiRequest(`/api/rating/${ratingType}/compare`, {
         bin_size: 300,
       });
       setData(
@@ -825,7 +824,7 @@ function TitleByRatingDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/rating/${ratingType}/title`);
+      const result = await doApiRequest(`/api/rating/${ratingType}/title`);
       setData(result.titles.sort((a, b) => b.avg_rating - a.avg_rating));
     })();
   }, [ratingType]);
@@ -849,7 +848,7 @@ function RatingByCountryDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/rating/${ratingType}/country`);
+      const result = await doApiRequest(`/api/rating/${ratingType}/country`);
       setData(result.countries.sort((a, b) => b.avg_rating - a.avg_rating));
     })();
   }, [ratingType]);
@@ -880,7 +879,7 @@ function PlayTimeByRatingDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/rating/${ratingType}/play-time`, {
+      const result = await doApiRequest(`/api/rating/${ratingType}/play-time`, {
         bin_size: 100,
       });
       setData(result.bins);
@@ -907,7 +906,7 @@ function PatronsByRatingDistributionChart() {
   useEffect(() => {
     (async () => {
       const result = await doApiRequest(
-        `/rating/${ratingType}/percent-patron`,
+        `/api/rating/${ratingType}/percent-patron`,
         {
           bin_size: 100,
         }
@@ -936,7 +935,7 @@ function TOSViolatorsByRatingDistributionChart() {
   useEffect(() => {
     (async () => {
       const result = await doApiRequest(
-        `/rating/${ratingType}/percent-tos-violators`,
+        `/api/rating/${ratingType}/percent-tos-violators`,
         {
           bin_size: 100,
         }
@@ -970,7 +969,7 @@ function CumulativeResultByRatingDistributionChart() {
   useEffect(() => {
     (async () => {
       const result = await doApiRequest(
-        `/rating/${ratingType}/cumulative-result-percentages`,
+        `/api/rating/${ratingType}/cumulative-result-percentages`,
         {
           bin_size: 100,
         }
@@ -1037,7 +1036,7 @@ function ResultPercentageTwoDimDistributionChart() {
   useEffect(() => {
     (async () => {
       const result = await doApiRequest(
-        `/rating/${ratingType}/result-percentages-2d`,
+        `/api/rating/${ratingType}/result-percentages-2d`,
         {
           bin_size: 100,
         }
@@ -1078,7 +1077,7 @@ function NumOpeningByRatingDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/rating/${ratingType}/num-openings`, {
+      const result = await doApiRequest(`/api/rating/${ratingType}/num-openings`, {
         bin_size: 100,
       });
       setData(result.bins);
