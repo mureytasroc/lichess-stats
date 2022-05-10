@@ -1,14 +1,4 @@
-export const API_BASE_URL = "https://lichess-stats.org/api";
-
-export function getApiUrl(path) {
-  if (/^https?:\/\//.test(path)) {
-    const url = new URL(path);
-    return url.pathname + url.search;
-  }
-  return API_BASE_URL + path;
-}
-
-export function doApiRequest(path, params, data) {
+export default function doApiRequest(path, params, data) {
   let formattedData = data;
   if (!formattedData) {
     formattedData = {};
@@ -26,6 +16,6 @@ export function doApiRequest(path, params, data) {
     formattedData.body = JSON.stringify(formattedData.body);
   }
   const url =
-    getApiUrl(path) + (params !== {} ? "?" : "") + new URLSearchParams(params);
+    path + (params !== {} ? "?" : "") + new URLSearchParams(params);
   return fetch(url, formattedData).then((response) => response.json());
 }

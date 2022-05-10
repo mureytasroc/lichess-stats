@@ -16,7 +16,7 @@ def get_db_connection():
     )
 
 
-def get_dict_cursor(db_connection):
+def get_dict_cursor():
     """
     Given a database connection (as returned by `get_db_connection()`),
     return a dict cursor context manager that also auto-commits when the context is closed.
@@ -30,9 +30,10 @@ def get_dict_cursor(db_connection):
 
     @contextmanager
     def dict_cursor():
-        with db_connection.cursor(pymysql.cursors.DictCursor) as cur:
-            yield cur
-            db_connection.commit()
+        with get_db_connection() as db_connection:
+            with db_connection.cursor(pymysql.cursors.DictCursor) as cur:
+                yield cur
+                db_connection.commit()
 
     return dict_cursor
 

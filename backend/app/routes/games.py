@@ -14,7 +14,7 @@ from app.models.games import CastlingPercentage, DateDistribution
 
 router = APIRouter()
 
-dict_cursor = get_dict_cursor(get_db_connection())
+dict_cursor = get_dict_cursor()
 
 
 @router.get(
