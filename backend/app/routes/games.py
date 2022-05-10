@@ -239,9 +239,9 @@ async def avgTime(username: Optional[str] = None):
             ],
         }
 
-@router.get("/MostCommonOpeningsElo", description="Average Time Taken for a Player to Win")
+@router.get("/MostCommonOpeningsElo", description="Most Common Openings Played in an Elo Range")
 @cache()
-async def avgTime(elo_lower: Optional[int] = Query(
+async def mostCommonOpenings(elo_lower: Optional[int] = Query(
         default=0,
         description="Optionally, provide a lower bound for elo search"), 
         elo_upper: Optional[int] = Query(
@@ -293,6 +293,47 @@ async def avgTime(elo_lower: Optional[int] = Query(
                 "elo_upper": elo_upper,
             },
         )
+
+        result = curr.fetchall()
+        return result
+
+@router.get("/BiggestComebacks", description="Ordered list of biggest comebacks made for players")
+@cache()
+async def biggestComebacks():
+    with dict_cursor() as curr:
+        curr.execute(
+            """
+            WITH white_wins AS (SELECT lichess_id AS id, white_username AS winner_username
+                    FROM Game
+                    WHERE result = '1-0'),
+            black_wins AS (
+                SELECT lichess_id AS id, black_username AS winner_username
+                FROM Game
+                WHERE result = '0-1'),
+            worst_white_positions AS (
+                SELECT w.id AS game_id, ABS(MIN(e.eval)) AS worst_position
+                FROM white_wins w
+                        INNER JOIN Evaluation e ON w.id = e.game_id
+                GROUP BY w.id
+            ),
+            worst_black_positions AS (
+                SELECT b.id AS game_id, ABS(MAX(e.eval)) AS worst_position
+                FROM black_wins b
+                        INNER JOIN Evaluation e ON b.id = e.game_id
+                GROUP BY b.id)
+            SELECT winner_username, MAX(results.worst_position) AS comeback_deficit
+            FROM (SELECT winner_username, MAX(b.worst_position) AS worst_position
+                FROM white_wins a
+                        INNER JOIN worst_white_positions b ON a.id = b.game_id
+                GROUP BY winner_username
+                UNION
+                SELECT winner_username, MAX(b.worst_position) AS worst_position
+                FROM black_wins a
+                        INNER JOIN worst_black_positions b ON a.id = b.game_id
+                GROUP BY winner_username) AS results
+            GROUP BY winner_username
+            ORDER BY comeback_deficit DESC
+            """)
 
         result = curr.fetchall()
         return result
