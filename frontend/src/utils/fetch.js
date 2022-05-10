@@ -1,17 +1,4 @@
-export const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://lichess-stats.org/api"
-    : "http://localhost:8000/api";
-
-export function getApiUrl(path) {
-  if (/^https?:\/\//.test(path)) {
-    const url = new URL(path);
-    return url.pathname + url.search;
-  }
-  return API_BASE_URL + path;
-}
-
-export function doApiRequest(path, params, data) {
+export default function doApiRequest(path, params, data) {
   let formattedData = data;
   if (!formattedData) {
     formattedData = {};
@@ -28,7 +15,6 @@ export function doApiRequest(path, params, data) {
   if (formattedData.body && !(formattedData.body instanceof FormData)) {
     formattedData.body = JSON.stringify(formattedData.body);
   }
-  const url =
-    getApiUrl(path) + (params !== {} ? "?" : "") + new URLSearchParams(params);
+  const url = path + (params !== {} ? "?" : "") + new URLSearchParams(params);
   return fetch(url, formattedData).then((response) => response.json());
 }

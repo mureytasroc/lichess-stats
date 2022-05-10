@@ -8,13 +8,13 @@ from fastapi import APIRouter, Path, Query
 from fastapi_redis_cache import cache
 
 from app.database.connect import get_db_connection, get_dict_cursor
-from app.database.util import GameType, convert_to_float
+from app.database.util import GameType
 from app.models.games import CastlingPercentage, DateDistribution
 
 
 router = APIRouter()
 
-dict_cursor = get_dict_cursor(get_db_connection())
+dict_cursor = get_dict_cursor()
 
 
 @router.get(
@@ -33,7 +33,7 @@ async def date_distribution():
             """
         )
         result = cur.fetchall()
-    return {"dates": convert_to_float(result)}
+    return {"dates": result}
 
 
 @router.get(
@@ -108,7 +108,7 @@ async def castling_percentage(
         )
         result = curr.fetchall()
 
-        return {"players": convert_to_float(result)}
+        return {"players": result}
 
 
 @router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
@@ -172,7 +172,7 @@ async def ratio(username: Optional[str] = None):
                     "username": r["username"],
                     "RatioKtoQ": r["ratio"],
                 }
-                for r in convert_to_float(result)
+                for r in result
             ],
         }
 
@@ -235,6 +235,105 @@ async def avgTime(username: Optional[str] = None):
                     "username": r["username"],
                     "avgTime": r["avgTime"],
                 }
-                for r in convert_to_float(result)
+                for r in result
             ],
         }
+
+@router.get("/MostCommonOpeningsElo", description="Most Common Openings Played in an Elo Range")
+@cache()
+async def mostCommonOpenings(elo_lower: Optional[int] = Query(
+        default=0,
+        description="Optionally, provide a lower bound for elo search"), 
+        elo_upper: Optional[int] = Query(
+        default=3000,
+        description="Optionally, provide an upper bound for elo search"),
+        game_type: Optional[GameType] = Query(
+        default=GameType.Blitz, description="Optionally, specify a game type to analyze.")):
+    with dict_cursor() as curr:
+        curr.execute(
+            """
+            WITH PLAYER_ELO_FILTER AS (
+                SELECT *
+                FROM Player
+                WHERE %(game_type)s >= %(elo_lower)s
+                AND %(game_type)s <= %(elo_upper)s
+            ),
+            WHITE_OPENINGS AS (
+                SELECT g.opening_eco AS opening_code, COUNT(*) AS COUNT
+                FROM PLAYER_ELO_FILTER p
+                        INNER JOIN Game g ON (p.username = g.white_username)
+                GROUP BY g.opening_eco
+                ORDER BY g.opening_eco),
+            BLACK_OPENINGS AS (
+                SELECT g.opening_eco AS opening_code, COUNT(*) AS COUNT
+                FROM PLAYER_ELO_FILTER p
+                        INNER JOIN Game g ON (p.username = g.black_username)
+                GROUP BY g.opening_eco
+                ORDER BY g.opening_eco),
+            OPENINGS AS (
+                SELECT opening_code, SUM(COUNT) AS COUNT
+                FROM (SELECT *
+                    FROM WHITE_OPENINGS
+                    UNION
+                    SELECT *
+                    FROM BLACK_OPENINGS) AS tbl
+                GROUP BY opening_code
+            )
+            SELECT opening_code,
+                e.opening_name,
+                e.opening_moves,
+                ROUND(count / (SELECT SUM(count) FROM OPENINGS), 3) AS frequency
+            FROM OPENINGS o
+                    INNER JOIN EcoCode e ON o.opening_code = e.code
+            ORDER BY frequency DESC
+            """,
+            {
+                "game_type": game_type,
+                "elo_lower": elo_lower,
+                "elo_upper": elo_upper,
+            },
+        )
+
+        result = curr.fetchall()
+        return result
+
+@router.get("/BiggestComebacks", description="Ordered list of biggest comebacks made for players")
+@cache()
+async def biggestComebacks():
+    with dict_cursor() as curr:
+        curr.execute(
+            """
+            WITH white_wins AS (SELECT lichess_id AS id, white_username AS winner_username
+                    FROM Game
+                    WHERE result = '1-0'),
+            black_wins AS (
+                SELECT lichess_id AS id, black_username AS winner_username
+                FROM Game
+                WHERE result = '0-1'),
+            worst_white_positions AS (
+                SELECT w.id AS game_id, ABS(MIN(e.eval)) AS worst_position
+                FROM white_wins w
+                        INNER JOIN Evaluation e ON w.id = e.game_id
+                GROUP BY w.id
+            ),
+            worst_black_positions AS (
+                SELECT b.id AS game_id, ABS(MAX(e.eval)) AS worst_position
+                FROM black_wins b
+                        INNER JOIN Evaluation e ON b.id = e.game_id
+                GROUP BY b.id)
+            SELECT winner_username, MAX(results.worst_position) AS comeback_deficit
+            FROM (SELECT winner_username, MAX(b.worst_position) AS worst_position
+                FROM white_wins a
+                        INNER JOIN worst_white_positions b ON a.id = b.game_id
+                GROUP BY winner_username
+                UNION
+                SELECT winner_username, MAX(b.worst_position) AS worst_position
+                FROM black_wins a
+                        INNER JOIN worst_black_positions b ON a.id = b.game_id
+                GROUP BY winner_username) AS results
+            GROUP BY winner_username
+            ORDER BY comeback_deficit DESC
+            """)
+
+        result = curr.fetchall()
+        return result
