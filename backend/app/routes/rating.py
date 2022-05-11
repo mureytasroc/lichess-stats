@@ -304,7 +304,7 @@ async def completion_rate(
                         ) as completion,
                         category,
                         start_timestamp
-                    FROM Game g INNER JOIN Player p ON g.white_username = p.username
+                    FROM Game
                     UNION ALL
                     SELECT
                         black_elo as rating,

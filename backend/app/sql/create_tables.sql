@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS Player
      tos_violation             BOOLEAN NOT NULL -- user has violated lichess TOS
   );
 
+CREATE INDEX profile_country_idx ON Player(country);
+CREATE INDEX profile_title_idx ON Player(title);
+
 CREATE TABLE EcoCode
 (
     code                       CHAR(3) PRIMARY KEY,
@@ -100,6 +103,10 @@ CREATE TABLE IF NOT EXISTS Game
 CREATE INDEX game_white_username_idx ON Game(white_username); -- TODO: turn into foreign key after data is loaded
 CREATE INDEX game_black_username_idx ON Game(black_username); -- TODO: turn into foreign key after data is loaded
 
+CREATE INDEX game_category_idx ON Game(category);
+CREATE INDEX game_start_timestamp_idx ON Game(start_timestamp);
+CREATE INDEX game_result_idx ON Game(result);
+CREATE INDEX game_termination_idx ON Game(termination);
 
 CREATE TABLE IF NOT EXISTS GameMove
   (

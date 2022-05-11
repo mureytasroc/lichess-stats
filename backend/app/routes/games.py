@@ -109,68 +109,84 @@ async def castling_percentage(
 
 @router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
 @cache()
-async def ratio(username: Optional[str] = None):
+async def castling_side_percentages(
+    username: Optional[str] = Query(
+        default=None,
+        description="Optionally, provide a specific username for which to get castling statistics.",  # noqa: E501
+    ),
+    game_type: Optional[GameType] = Query(default=None, description="The game type to analyze."),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+):
     with dict_cursor() as curr:
-        if not username:
-            sql = """WITH player_game AS (SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.white_username
-                    UNION ALL SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.black_username
-                    ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMove
-        WHERE move_notation IN ('O-O', 'O-O-O')),
-        castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O'
-        GROUP BY username
-            HAVING king > 0),
-    castle_queen AS (SELECT username, COUNT(DISTINCT game_id) as queen FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O-O'
-    GROUP BY username
-        HAVING queen > 0)
-        SELECT castle_king.username, king/queen as ratio FROM (
-        castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
-        );"""
-        else:
-            sql = (
-                """
-            WITH player_game AS (SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.white_username
-                    UNION ALL SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.black_username
-                    ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMove
-        WHERE move_notation IN ('O-O', 'O-O-O')),
-        castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O'
-        GROUP BY username
-            HAVING king > 0),
-    castle_queen AS (SELECT username, COUNT(DISTINCT game_id) as queen FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O-O'
-    GROUP BY username
-        HAVING queen > 0)
-        SELECT castle_king.username, king/queen as ratio  FROM (
-        castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
-        ) WHERE castle_king.username = \'"""
-                + username
-                + "' ; "
+        curr.execute(
+            """
+            WITH FlatGame as (
+                SELECT
+                    white_username as username,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O'
+                            AND MOD(ply, 2) = 1
+                    ) THEN 100 ELSE 0 END) as castle_king,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O-O'
+                            AND MOD(ply, 2) = 1
+                    ) THEN 100 ELSE 0 END) as castle_queen
+                FROM Game
+                WHERE %(username)s IS NULL OR white_username = %(username)s
+                    AND (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
+                UNION ALL
+                SELECT
+                    black_username as username,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O'
+                            AND MOD(ply, 2) = 0
+                    ) THEN 100 ELSE 0 END) as castle_king,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O-O'
+                            AND MOD(ply, 2) = 0
+                    ) THEN 100 ELSE 0 END) as castle_queen
+                FROM Game
+                WHERE %(username)s IS NULL OR black_username = %(username)s
+                    AND (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             )
-
-        curr.execute(sql)
+            SELECT 
+                username,
+                SUM(castle_king) / SUM(castle_queen) as RatioKtoQ
+            FROM FlatGame
+            GROUP BY username
+            """,
+            {
+                "username": username,
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
         result = curr.fetchall()
-
-        return {
-            "players": [
-                {
-                    "username": r["username"],
-                    "RatioKtoQ": r["ratio"],
-                }
-                for r in convert_to_float(result)
-            ],
-        }
+    return {"players": convert_to_float(result)}
 
 
 @router.get("/AvgTimeToWin", description="Average Time Taken for a Player to Win")
