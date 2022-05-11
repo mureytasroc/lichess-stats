@@ -784,7 +784,7 @@ async def termination_type(
                 "bin_size": bin_size,
             },
         )
-        flat_result = cur.fetchall()
+        flat_result = convert_to_float(cur.fetchall())
     result = defaultdict(list)
     for r in flat_result:
         result[r["rating_min"], r["rating_max"]].append(
@@ -800,6 +800,6 @@ async def termination_type(
                 "rating_max": rating_max,
                 "termination_types": result[rating_min, rating_max],
             }
-            for rating_min, rating_max in convert_to_float(result)
+            for rating_min, rating_max in result
         ],
     }

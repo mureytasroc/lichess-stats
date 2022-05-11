@@ -290,7 +290,7 @@ async def termination_type_by_title(
                 "termination_parity": termination_parity,
             },
         )
-        flat_result = cur.fetchall()
+        flat_result = convert_to_float(cur.fetchall())
 
     result = defaultdict(list)
     for r in flat_result:
@@ -302,10 +302,7 @@ async def termination_type_by_title(
         )
 
     return {
-        "titles": [
-            {"title": title, "termination_types": result[title]}
-            for title in convert_to_float(result)
-        ],
+        "titles": [{"title": title, "termination_types": result[title]} for title in result],
     }
 
 
@@ -618,7 +615,7 @@ async def termination_type_by_country(
                 "termination_parity": termination_parity,
             },
         )
-        flat_result = cur.fetchall()
+        flat_result = convert_to_float(cur.fetchall())
 
     result = defaultdict(list)
     for r in flat_result:
@@ -632,7 +629,7 @@ async def termination_type_by_country(
     return {
         "countries": [
             {"country": country_codes.get(country, country), "termination_types": result[country]}
-            for country in convert_to_float(result)
+            for country in result
         ],
     }
 
