@@ -7,9 +7,14 @@ import pymysql.cursors
 from fastapi import APIRouter, Path, Query
 from fastapi_redis_cache import cache
 
-from app.database.connect import get_db_connection, get_dict_cursor
+from app.database.connect import get_dict_cursor
 from app.database.util import GameType
-from app.models.games import CastlingPercentage, DateDistribution
+from app.models.games import (
+    CastlingPercentage,
+    DateDistribution,
+    CastlingSidePercentages,
+    AvgTimeToWin,
+)
 
 
 router = APIRouter()
@@ -38,7 +43,7 @@ async def date_distribution():
 
 @router.get(
     "/castling-percentage",
-    description="Get the castling percentage by player",
+    description="Get the castling percentage by player.",
     response_model=CastlingPercentage,
 )
 @cache()
@@ -107,148 +112,184 @@ async def castling_percentage(
             },
         )
         result = curr.fetchall()
+    return {"players": result}
 
-        return {"players": result}
 
-
-@router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
+@router.get(
+    "/castling-side-percentages",
+    description="Get kingside and queenside castling percentages by player.",
+    response_model=CastlingSidePercentages,
+)
 @cache()
-async def ratio(username: Optional[str] = None):
+async def castling_side_percentages(
+    username: Optional[str] = Query(
+        default=None,
+        description="Optionally, provide a specific username for which to get castling statistics.",  # noqa: E501
+    ),
+    game_type: Optional[GameType] = Query(default=None, description="The game type to analyze."),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+):
     with dict_cursor() as curr:
-        if not username:
-            sql = """WITH player_game AS (SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.white_username
-                    UNION ALL SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.black_username
-                    ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMove
-        WHERE move_notation IN ('O-O', 'O-O-O')),
-        castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O'
-        GROUP BY username
-            HAVING king > 0),
-    castle_queen AS (SELECT username, COUNT(DISTINCT game_id) as queen FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O-O'
-    GROUP BY username
-        HAVING queen > 0)
-        SELECT castle_king.username, king/queen as ratio FROM (
-        castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
-        );"""
-        else:
-            sql = (
-                """
-            WITH player_game AS (SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.white_username
-                    UNION ALL SELECT username, lichess_id FROM
-                Player JOIN Game on Player.username = Game.black_username
-                    ),
-        castleOnly AS (SELECT DISTINCT game_id, move_notation FROM GameMove
-        WHERE move_notation IN ('O-O', 'O-O-O')),
-        castle_king AS (SELECT username, COUNT(DISTINCT game_id) as king FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O'
-        GROUP BY username
-            HAVING king > 0),
-    castle_queen AS (SELECT username, COUNT(DISTINCT game_id) as queen FROM (
-        player_game JOIN castleOnly on player_game.lichess_id = castleOnly.game_id
-        ) WHERE move_notation  = 'O-O-O'
-    GROUP BY username
-        HAVING queen > 0)
-        SELECT castle_king.username, king/queen as ratio  FROM (
-        castle_king JOIN castle_queen ON castle_king.username = castle_queen.username
-        ) WHERE castle_king.username = \'"""
-                + username
-                + "' ; "
+        curr.execute(
+            """
+            WITH FlatGame as (
+                SELECT
+                    white_username as username,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O'
+                            AND MOD(ply, 2) = 1
+                    ) THEN 100 ELSE 0 END) as castle_king,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O-O'
+                            AND MOD(ply, 2) = 1
+                    ) THEN 100 ELSE 0 END) as castle_queen
+                FROM Game
+                WHERE %(username)s IS NULL OR white_username = %(username)s
+                    AND (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
+                UNION ALL
+                SELECT
+                    black_username as username,
+                    lichess_id,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O'
+                            AND MOD(ply, 2) = 0
+                    ) THEN 100 ELSE 0 END) as castle_king,
+                    (CASE WHEN EXISTS(
+                        SELECT * FROM GameMove m
+                        WHERE m.game_id = lichess_id
+                            AND move_notation = 'O-O-O'
+                            AND MOD(ply, 2) = 0
+                    ) THEN 100 ELSE 0 END) as castle_queen
+                FROM Game
+                WHERE %(username)s IS NULL OR black_username = %(username)s
+                    AND (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             )
-
-        curr.execute(sql)
+            SELECT 
+                username,
+                SUM(castle_king) / COUNT(*) as kingside_percentage,
+                SUM(castle_queen) / COUNT(*) as queenside_percentage
+            FROM FlatGame
+            GROUP BY username
+            """,
+            {
+                "username": username,
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
         result = curr.fetchall()
-
-        return {
-            "players": [
-                {
-                    "username": r["username"],
-                    "RatioKtoQ": r["ratio"],
-                }
-                for r in result
-            ],
-        }
+    return {"players": result}
 
 
-@router.get("/AvgTimeToWin", description="Average Time Taken for a Player to Win")
+@router.get(
+    "/avg-time-to-win",
+    description="Average time taken for a player to win.",
+    response_model=AvgTimeToWin,
+)
 @cache()
-async def avgTime(username: Optional[str] = None):
+async def avg_time_to_win(
+    username: Optional[str] = Query(
+        default=None,
+        description="Optionally, provide a specific username for which to get average time to win.",  # noqa: E501
+    ),
+    game_type: Optional[GameType] = Query(default=None, description="The game type to analyze."),
+    start_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify a start date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        regex=r"^\d{4}-\d{2}-\d{2}$",
+        description="Optionally, specify an end date of games to analyze (inclusive), of the form YYYY-MM-DD (UTC).",  # noqa: E501
+    ),
+):
     with dict_cursor() as curr:
-        if not username:
-            sql = """WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
-                    Player CROSS JOIN Game on Player.username = Game.white_username
-                where result = '1-0'),
-            white_time AS (SELECT username, lichess_id, (MAX(white_hundredths) - MIN(white_hundredths)) as time FROM
-                player_game_white JOIN TimeRemaining on player_game_white.lichess_id = TimeRemaining.game_id
-                GROUP BY username, lichess_id
-                ),
-        player_game_black AS (SELECT DISTINCT username, lichess_id,result FROM
-                    Player JOIN Game on Player.username = Game.black_username
-            where result = '0-1'
-        ),
-            black_time AS (SELECT username, game_id, (MAX(black_hundredths) - MIN(black_hundredths)) as time FROM
-                player_game_black JOIN TimeRemaining on player_game_black.lichess_id = TimeRemaining.game_id
-                GROUP BY username, game_id
+        curr.execute(
+            """
+            WITH FilteredGame as (
+                SELECT * FROM Game
+                WHERE
+                    (%(game_type)s IS NULL OR %(game_type)s = category)
+                    AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
+                    AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             ),
-        time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
-        SELECT username, AVG(time) as avgTime
-        FROM time_union
-        GROUP BY username;"""
-        else:
-            sql = (
-                """
-            WITH player_game_white AS (SELECT DISTINCT username, lichess_id FROM
-                    Player CROSS JOIN Game on Player.username = Game.white_username
-                where result = '1-0'),
-            white_time AS (SELECT username, lichess_id, (MAX(white_hundredths) - MIN(white_hundredths)) as time FROM
-                player_game_white JOIN TimeRemaining on player_game_white.lichess_id = TimeRemaining.game_id
-                GROUP BY username, lichess_id
-                ),
-        player_game_black AS (SELECT DISTINCT username, lichess_id,result FROM
-                    Player JOIN Game on Player.username = Game.black_username
-            where result = '0-1'
-        ),
-            black_time AS (SELECT username, game_id, (MAX(black_hundredths) - MIN(black_hundredths)) as time FROM
-                player_game_black JOIN TimeRemaining on player_game_black.lichess_id = TimeRemaining.game_id
-                GROUP BY username, game_id
+            WhiteWin AS (
+                SELECT * FROM FilteredGame
+                WHERE
+                    %(username)s IS NULL OR white_username = %(username)s
+                    AND result = '1-0'
             ),
-        time_union as (SELECT * FROM white_time UNION ALL SELECT * FROM black_time)
-        SELECT username, AVG(time) as avgTime
-        FROM time_union
-        WHERE username = \'"""
-                + username
-                + "' ; "
+            BlackWin AS (
+                SELECT * FROM FilteredGame
+                WHERE
+                    %(username)s IS NULL OR black_username = %(username)s
+                    AND result = '0-1'
+            ),
+            TimeToWin AS (
+                SELECT 
+                    g.white_username as username,
+                    MAX(white_hundredths) - MIN(white_hundredths) as time_to_win
+                FROM WhiteWin g INNER JOIN TimeRemaining t ON g.lichess_id = t.game_id
+                GROUP BY g.white_username, g.lichess_id
+                UNION ALL
+                SELECT 
+                    g.black_username as username,
+                    MAX(black_hundredths) - MIN(black_hundredths) as time_to_win
+                FROM BlackWin g INNER JOIN TimeRemaining t ON g.lichess_id = t.game_id
+                GROUP BY g.black_username, g.lichess_id
             )
-
-        curr.execute(sql)
+            SELECT
+                username,
+                AVG(time_to_win) / 100 as avg_time_to_win
+            FROM TimeToWin
+            GROUP BY username
+            """,
+            {
+                "username": username,
+                "game_type": game_type,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
         result = curr.fetchall()
-        return {
-            "players": [
-                {
-                    "username": r["username"],
-                    "avgTime": r["avgTime"],
-                }
-                for r in result
-            ],
-        }
+    return {"players": result}
+
 
 @router.get("/MostCommonOpeningsElo", description="Most Common Openings Played in an Elo Range")
 @cache()
-async def mostCommonOpenings(elo_lower: Optional[int] = Query(
-        default=0,
-        description="Optionally, provide a lower bound for elo search"), 
-        elo_upper: Optional[int] = Query(
-        default=3000,
-        description="Optionally, provide an upper bound for elo search"),
-        game_type: Optional[GameType] = Query(
-        default=GameType.Blitz, description="Optionally, specify a game type to analyze.")):
+async def mostCommonOpenings(
+    elo_lower: Optional[int] = Query(
+        default=0, description="Optionally, provide a lower bound for elo search"
+    ),
+    elo_upper: Optional[int] = Query(
+        default=3000, description="Optionally, provide an upper bound for elo search"
+    ),
+    game_type: Optional[GameType] = Query(
+        default=GameType.Blitz, description="Optionally, specify a game type to analyze."
+    ),
+):
     with dict_cursor() as curr:
         curr.execute(
             """
@@ -297,6 +338,7 @@ async def mostCommonOpenings(elo_lower: Optional[int] = Query(
         result = curr.fetchall()
         return result
 
+
 @router.get("/BiggestComebacks", description="Ordered list of biggest comebacks made for players")
 @cache()
 async def biggestComebacks():
@@ -333,7 +375,8 @@ async def biggestComebacks():
                 GROUP BY winner_username) AS results
             GROUP BY winner_username
             ORDER BY comeback_deficit DESC
-            """)
+            """
+        )
 
         result = curr.fetchall()
         return result

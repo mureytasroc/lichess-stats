@@ -22,7 +22,6 @@ function App() {
     Charts.CumulativeResultByRatingDistribution,
     Charts.ResultPercentageTwoDimDistribution,
     Charts.NumOpeningByRatingDistribution,
-    Charts.GameTimeDistribution,
     Charts.CastlingPercentage,
     Charts.CastlingTypePercentage,
     Charts.TimeToWin,
