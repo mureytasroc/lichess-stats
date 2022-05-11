@@ -4,13 +4,13 @@ from typing import Optional
 from fastapi import APIRouter, Path, Query
 from fastapi_redis_cache import cache
 
-from app.database.connect import get_db_connection, get_dict_cursor
+from app.database.connect import get_dict_cursor
 from app.database.util import (
     GameType,
     RatingType,
     TerminationParity,
-    get_rating_col,
     convert_to_float,
+    get_rating_col,
 )
 from app.models.rating import (
     CastlingRateByRating,

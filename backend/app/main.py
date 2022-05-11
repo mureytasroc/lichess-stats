@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi_redis_cache import FastApiRedisCache, cache
+from fastapi_redis_cache import FastApiRedisCache
 
 from app.documentation import tags_metadata
 from app.routes import api

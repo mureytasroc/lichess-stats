@@ -9,9 +9,9 @@ from app.database.util import (
     GameType,
     TerminationParity,
     convert_country_codes,
+    convert_to_float,
     country_codes,
     title_to_desc,
-    convert_to_float,
 )
 from app.models.profile import (
     CompletionRateByCountry,

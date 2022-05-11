@@ -1,19 +1,15 @@
-from multiprocessing import connection
-from statistics import mode
-from tokenize import String
 from typing import Optional
 
-import pymysql.cursors
-from fastapi import APIRouter, Path, Query
+from fastapi import APIRouter, Query
 from fastapi_redis_cache import cache
 
 from app.database.connect import get_dict_cursor
-from app.database.util import GameType
+from app.database.util import GameType, convert_to_float
 from app.models.games import (
-    CastlingPercentage,
-    DateDistribution,
-    CastlingSidePercentages,
     AvgTimeToWin,
+    CastlingPercentage,
+    CastlingSidePercentages,
+    DateDistribution,
 )
 
 
@@ -38,7 +34,7 @@ async def date_distribution():
             """
         )
         result = cur.fetchall()
-    return {"dates": result}
+    return {"dates": convert_to_float(result)}
 
 
 @router.get(
@@ -98,7 +94,7 @@ async def castling_percentage(
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             )
-            SELECT 
+            SELECT
                 username,
                 SUM(castle) / COUNT(*) as castling_percentage
             FROM FlatGame
@@ -112,7 +108,7 @@ async def castling_percentage(
             },
         )
         result = curr.fetchall()
-    return {"players": result}
+    return {"players": convert_to_float(result)}
 
 
 @router.get(
@@ -184,7 +180,7 @@ async def castling_side_percentages(
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             )
-            SELECT 
+            SELECT
                 username,
                 SUM(castle_king) / COUNT(*) as kingside_percentage,
                 SUM(castle_queen) / COUNT(*) as queenside_percentage
@@ -199,7 +195,7 @@ async def castling_side_percentages(
             },
         )
         result = curr.fetchall()
-    return {"players": result}
+    return {"players": convert_to_float(result)}
 
 
 @router.get(
@@ -248,13 +244,13 @@ async def avg_time_to_win(
                     AND result = '0-1'
             ),
             TimeToWin AS (
-                SELECT 
+                SELECT
                     g.white_username as username,
                     MAX(white_hundredths) - MIN(white_hundredths) as time_to_win
                 FROM WhiteWin g INNER JOIN TimeRemaining t ON g.lichess_id = t.game_id
                 GROUP BY g.white_username, g.lichess_id
                 UNION ALL
-                SELECT 
+                SELECT
                     g.black_username as username,
                     MAX(black_hundredths) - MIN(black_hundredths) as time_to_win
                 FROM BlackWin g INNER JOIN TimeRemaining t ON g.lichess_id = t.game_id
@@ -274,7 +270,7 @@ async def avg_time_to_win(
             },
         )
         result = curr.fetchall()
-    return {"players": result}
+    return {"players": convert_to_float(result)}
 
 
 @router.get("/MostCommonOpeningsElo", description="Most Common Openings Played in an Elo Range")
@@ -336,7 +332,7 @@ async def mostCommonOpenings(
         )
 
         result = curr.fetchall()
-        return result
+        return convert_to_float(result)
 
 
 @router.get("/BiggestComebacks", description="Ordered list of biggest comebacks made for players")
@@ -379,4 +375,4 @@ async def biggestComebacks():
         )
 
         result = curr.fetchall()
-        return result
+        return convert_to_float(result)
