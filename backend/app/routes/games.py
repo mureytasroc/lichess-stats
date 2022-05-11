@@ -1,14 +1,10 @@
-from multiprocessing import connection
-from statistics import mode
-from tokenize import String
 from typing import Optional
 
-import pymysql.cursors
-from fastapi import APIRouter, Path, Query
+from fastapi import APIRouter, Query
 from fastapi_redis_cache import cache
 
-from app.database.connect import get_db_connection, get_dict_cursor
-from app.database.util import GameType
+from app.database.connect import get_dict_cursor
+from app.database.util import GameType, convert_to_float
 from app.models.games import CastlingPercentage, DateDistribution
 
 
@@ -33,7 +29,7 @@ async def date_distribution():
             """
         )
         result = cur.fetchall()
-    return {"dates": result}
+    return {"dates": convert_to_float(result)}
 
 
 @router.get(
@@ -93,7 +89,7 @@ async def castling_percentage(
                     AND (%(start_date)s IS NULL OR %(start_date)s <= DATE(start_timestamp))
                     AND (%(end_date)s IS NULL OR  DATE(start_timestamp) <= %(end_date)s)
             )
-            SELECT 
+            SELECT
                 username,
                 SUM(castle) / COUNT(*) as castling_percentage
             FROM FlatGame
@@ -108,7 +104,7 @@ async def castling_percentage(
         )
         result = curr.fetchall()
 
-        return {"players": result}
+        return {"players": convert_to_float(result)}
 
 
 @router.get("/RatioKtoQ", description="Ratio of King to Queen Castling by player")
@@ -172,7 +168,7 @@ async def ratio(username: Optional[str] = None):
                     "username": r["username"],
                     "RatioKtoQ": r["ratio"],
                 }
-                for r in result
+                for r in convert_to_float(result)
             ],
         }
 
@@ -235,21 +231,24 @@ async def avgTime(username: Optional[str] = None):
                     "username": r["username"],
                     "avgTime": r["avgTime"],
                 }
-                for r in result
+                for r in convert_to_float(result)
             ],
         }
 
 
 @router.get("/MostCommonOpeningsElo", description="Most Common Openings Played in an Elo Range")
 @cache()
-async def mostCommonOpenings(elo_lower: Optional[int] = Query(
-        default=0,
-        description="Optionally, provide a lower bound for elo search"),
-        elo_upper: Optional[int] = Query(
-        default=3000,
-        description="Optionally, provide an upper bound for elo search"),
-        game_type: Optional[GameType] = Query(
-        default=GameType.Blitz, description="Optionally, specify a game type to analyze.")):
+async def mostCommonOpenings(
+    elo_lower: Optional[int] = Query(
+        default=0, description="Optionally, provide a lower bound for elo search"
+    ),
+    elo_upper: Optional[int] = Query(
+        default=3000, description="Optionally, provide an upper bound for elo search"
+    ),
+    game_type: Optional[GameType] = Query(
+        default=GameType.Blitz, description="Optionally, specify a game type to analyze."
+    ),
+):
     with dict_cursor() as curr:
         curr.execute(
             """
@@ -296,7 +295,7 @@ async def mostCommonOpenings(elo_lower: Optional[int] = Query(
         )
 
         result = curr.fetchall()
-        return result
+        return convert_to_float(result)
 
 
 @router.get("/BiggestComebacks", description="Ordered list of biggest comebacks made for players")
@@ -335,7 +334,8 @@ async def biggestComebacks():
                 GROUP BY winner_username) AS results
             GROUP BY winner_username
             ORDER BY comeback_deficit DESC
-            """)
+            """
+        )
 
         result = curr.fetchall()
-        return result
+        return convert_to_float(result)
