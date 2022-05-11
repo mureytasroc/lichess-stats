@@ -12,7 +12,7 @@ const { Content, Sider } = Layout;
 
 function App() {
   const content = [
-    Charts.GameTimeDistribution,
+    // Charts.GameTimeDistribution,
     Charts.CastlingPercentage,
     Charts.CastlingTypePercentage,
     Charts.TimeToWin,
