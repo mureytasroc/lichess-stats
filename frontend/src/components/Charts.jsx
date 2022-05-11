@@ -1108,7 +1108,7 @@ function NumOpeningByRatingDistributionChart() {
 
   return (
     <>
-      <RatingTypeSelector handleChange={setRatingType} />
+      <GameTypeSelector handleChange={setRatingType} />
       <Column data={data} xField="rating_max" yField="num_openings" autoFit />
     </>
   );
