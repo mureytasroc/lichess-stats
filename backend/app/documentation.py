@@ -20,10 +20,6 @@ tags_metadata = [
         "description": "Routes involving analysis of user ratings.",
     },
     {
-        "name": "games",
-        "description": "Routes involving analysis of games.",
-    },
-    {
         "name": "profile",
         "description": (
             "Routes involving analysis of user profile attributes.\n"

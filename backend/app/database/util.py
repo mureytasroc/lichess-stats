@@ -1,6 +1,6 @@
+from decimal import Decimal
 from enum import auto
 from typing import List
-from decimal import Decimal
 
 from fastapi_utils.enums import StrEnum
 

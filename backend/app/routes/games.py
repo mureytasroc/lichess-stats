@@ -289,7 +289,7 @@ async def mostCommonOpenings(elo_lower: Optional[int] = Query(
             ORDER BY frequency DESC
             """,
             {
-                "game_type": game_type,
+                "game_type": game_type.value.lower() + "_rating",
                 "elo_lower": elo_lower,
                 "elo_upper": elo_upper,
             },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Statistic, List } from "antd";
-import { Bar, Line, Column, Heatmap } from "@ant-design/plots";
+import { Bar, Column, Heatmap } from "@ant-design/plots";
 import InfiniteScroll from "react-infinite-scroll-component";
 import doApiRequest from "../utils/fetch";
 import {
@@ -554,33 +554,17 @@ function GameLengthDistributionChart() {
   );
 }
 
+const loadingIndicator = (loading, elt) => (loading ? <Spin /> : elt);
+
 export const GameLengthDistribution = {
   title: "Game Lengths",
   content: <GameLengthDistributionChart />,
   group: "Profile",
 };
 
-function GameTimeDistributionChart() {
-  const [data, setData] = useState([]);
-
-  useEffect(() => {
-    (async () => {
-      const result = await doApiRequest("/api/games/date-distribution");
-      setData(result.dates);
-    })();
-  }, []);
-
-  return <Line data={data} xField="start_date" yField="count" autoFit />;
-}
-export const GameTimeDistribution = {
-  title: "Game Times",
-  content: <GameTimeDistributionChart />,
-  group: "Game",
-};
-
 function CastlingPercentageChart() {
   const [data, setData] = useState([{}]);
-  const [username, setUsername] = useState("Atom85");
+  const [username, setUsername] = useState("z1z0u");
   const [loading, setLoading] = useState(true);
 
   const [gameType, setGameType] = useState("All");
@@ -604,21 +588,24 @@ function CastlingPercentageChart() {
 
   return (
     <>
-      <div style={{ display: "flex" }}>
+      <div style={{ display: "flex", marginBottom: 10 }}>
         <GameTypeSelector handleChange={setGameType} />
         <DaySelector handleChange={setStartDay} />
         <DaySelector handleChange={setEndDay} />
       </div>
-      <Statistic
-        title={`Castling Percentage by ${username}`}
-        loading={loading}
-        value={
-          data[0] && data[0].castling_percentage
-            ? `${data[0].castling_percentage}%`
-            : "no data found"
-        }
-      />
-      <UsernameSelector onSearch={setUsername} defaultValue="Atom85" />
+      {loadingIndicator(
+        loading,
+        <Statistic
+          title={`Castling Percentage by ${username}`}
+          loading={loading}
+          value={
+            data[0] && data[0].castling_percentage
+              ? `${data[0].castling_percentage}%`
+              : "no data found"
+          }
+        />
+      )}
+      <UsernameSelector onSearch={setUsername} defaultValue="z1z0u" />
     </>
   );
 }
@@ -630,33 +617,73 @@ export const CastlingPercentage = {
 
 function CastlingTypePercentageChart() {
   const [data, setData] = useState([{}]);
-  const [username, setUsername] = useState("Atom85");
+  const [username, setUsername] = useState("z1z0u");
   const [loading, setLoading] = useState(true);
+
+  const [gameType, setGameType] = useState("All");
+  const [startDay, setStartDay] = useState();
+  const [endDay, setEndDay] = useState();
 
   useEffect(() => {
     (async () => {
       setLoading(true);
 
-      const result = await doApiRequest("/api/games/RatioKtoQ", {
-        username,
-      });
-      setData(result.players);
+      const params = {};
+      if (gameType !== "All") params.game_type = gameType;
+      if (startDay && startDay.length > 0) params.start_date = startDay;
+      if (endDay && endDay.length > 0) params.end_date = endDay;
+
+      const result = await doApiRequest(
+        "/api/games/castling-side-percentages",
+        {
+          username,
+          ...params,
+        }
+      );
+      setData(
+        result.players.flatMap(
+          ({ username: uname, kingside_percentage, queenside_percentage }) => [
+            {
+              username: uname,
+              value: kingside_percentage,
+              castle_side: "Kingside",
+            },
+            {
+              username: uname,
+              value: queenside_percentage,
+              castle_side: "Queenside",
+            },
+          ]
+        )
+      );
       setLoading(false);
     })();
-  }, [username]);
+  }, [username, gameType, startDay, endDay]);
 
   return (
     <>
-      <Statistic
-        title={`Castling Ratio by ${username}`}
-        loading={loading}
-        value={
-          data[0] && data[0].RatioKtoQ
-            ? `${data[0].RatioKtoQ}%`
-            : "no data found"
-        }
-      />
-      <UsernameSelector onSearch={setUsername} defaultValue="Atom85" />
+      <div style={{ display: "flex", marginBottom: 10 }}>
+        <GameTypeSelector handleChange={setGameType} />
+        <DaySelector handleChange={setStartDay} />
+        <DaySelector handleChange={setEndDay} />
+      </div>
+      {loadingIndicator(
+        loading,
+        data.length > 0 ? (
+          <Bar
+            data={data}
+            loading={loading}
+            isStack
+            isPercent
+            xField="value"
+            yField="username"
+            seriesField="castle_side"
+          />
+        ) : (
+          <span style={{ fontSize: 20, paddingBottom: 10 }}>no data found</span>
+        )
+      )}
+      <UsernameSelector onSearch={setUsername} defaultValue="z1z0u" />
     </>
   );
 }
@@ -668,33 +695,51 @@ export const CastlingTypePercentage = {
 
 function TimeToWinChart() {
   const [data, setData] = useState([{}]);
-  const [username, setUsername] = useState("Atom85");
+  const [username, setUsername] = useState("z1z0u");
   const [loading, setLoading] = useState(true);
+
+  const [gameType, setGameType] = useState("All");
+  const [startDay, setStartDay] = useState();
+  const [endDay, setEndDay] = useState();
 
   useEffect(() => {
     (async () => {
       setLoading(true);
 
-      const result = await doApiRequest("/api/games/AvgTimeToWin", {
+      const params = {};
+      if (gameType !== "All") params.game_type = gameType;
+      if (startDay && startDay.length > 0) params.start_date = startDay;
+      if (endDay && endDay.length > 0) params.end_date = endDay;
+
+      const result = await doApiRequest("/api/games/avg-time-to-win", {
         username,
+        ...params,
       });
       setData(result.players);
       setLoading(false);
     })();
-  }, [username]);
+  }, [username, gameType, startDay, endDay]);
 
   return (
     <>
-      <Statistic
-        title={`Moves to win by ${username}`}
-        loading={loading}
-        value={
-          data[0] && data[0].avgTime
-            ? `${data[0].avgTime / 100} seconds`
-            : "no data found"
-        }
-      />
-      <UsernameSelector onSearch={setUsername} defaultValue="Atom85" />
+      <div style={{ display: "flex", marginBottom: 10 }}>
+        <GameTypeSelector handleChange={setGameType} />
+        <DaySelector handleChange={setStartDay} />
+        <DaySelector handleChange={setEndDay} />
+      </div>
+      {loadingIndicator(
+        loading,
+        <Statistic
+          title={`Average time to win by ${username}`}
+          loading={loading}
+          value={
+            data[0] && data[0].avg_time_to_win
+              ? `${data[0].avg_time_to_win} seconds`
+              : "no data found"
+          }
+        />
+      )}
+      <UsernameSelector onSearch={setUsername} defaultValue="z1z0u" />
     </>
   );
 }
@@ -1097,7 +1142,7 @@ function NumOpeningByRatingDistributionChart() {
 
   return (
     <>
-      <RatingTypeSelector handleChange={setRatingType} />
+      <GameTypeSelector handleChange={setRatingType} notAll />
       <Column data={data} xField="rating_max" yField="num_openings" autoFit />
     </>
   );
