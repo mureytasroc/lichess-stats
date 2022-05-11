@@ -12,6 +12,12 @@ const { Content, Sider } = Layout;
 
 function App() {
   const content = [
+    Charts.GameTimeDistribution,
+    Charts.CastlingPercentage,
+    Charts.CastlingTypePercentage,
+    Charts.TimeToWin,
+    // Charts.OpeningDistribution,
+    Charts.BiggestComebacks,
     Charts.RatingDistribution,
     Charts.RatingCompareDistribution,
     Charts.TitleByRatingDistribution,
@@ -22,10 +28,6 @@ function App() {
     Charts.CumulativeResultByRatingDistribution,
     Charts.ResultPercentageTwoDimDistribution,
     Charts.NumOpeningByRatingDistribution,
-    Charts.GameTimeDistribution,
-    Charts.CastlingPercentage,
-    Charts.CastlingTypePercentage,
-    Charts.TimeToWin,
     Charts.TitleDistribution,
     Charts.CompletionRateDistribution,
     Charts.ResultPercentageDistribution,

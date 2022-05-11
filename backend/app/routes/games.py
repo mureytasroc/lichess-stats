@@ -239,11 +239,12 @@ async def avgTime(username: Optional[str] = None):
             ],
         }
 
+
 @router.get("/MostCommonOpeningsElo", description="Most Common Openings Played in an Elo Range")
 @cache()
 async def mostCommonOpenings(elo_lower: Optional[int] = Query(
         default=0,
-        description="Optionally, provide a lower bound for elo search"), 
+        description="Optionally, provide a lower bound for elo search"),
         elo_upper: Optional[int] = Query(
         default=3000,
         description="Optionally, provide an upper bound for elo search"),
@@ -296,6 +297,7 @@ async def mostCommonOpenings(elo_lower: Optional[int] = Query(
 
         result = curr.fetchall()
         return result
+
 
 @router.get("/BiggestComebacks", description="Ordered list of biggest comebacks made for players")
 @cache()

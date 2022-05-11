@@ -66,6 +66,23 @@ export function SlicerSelector({ length, handleChange }) {
   );
 }
 
+export function RatingRangeSelector({ handleChange }) {
+  return (
+    <div style={{ display: "flex", width: "100%" }}>
+      <div style={{ width: "20%" }}>Elo Range Selector</div>
+      <div style={{ width: "80%" }}>
+        <Slider
+          min={0}
+          max={3000}
+          defaultValue={[0, 3000]}
+          range
+          onAfterChange={handleChange}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function UsernameSelector({ onSearch, defaultValue }) {
   return (
     <Search

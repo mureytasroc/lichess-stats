@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Statistic } from "antd";
+import { Statistic, List } from "antd";
 import { Bar, Line, Column, Heatmap } from "@ant-design/plots";
+import InfiniteScroll from "react-infinite-scroll-component";
 import doApiRequest from "../utils/fetch";
 import {
   GameTypeSelector,
@@ -9,6 +10,7 @@ import {
   SlicerSelector,
   UsernameSelector,
   RatingTypeSelector,
+  RatingRangeSelector,
 } from "../utils/selectors";
 
 const NULL_NAME = "no title";
@@ -490,7 +492,10 @@ function GameLengthDistributionChart() {
       if (gameType !== "All") params.game_type = gameType;
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
-      const result = await doApiRequest(`/api/profile/${type}/game-length`, params);
+      const result = await doApiRequest(
+        `/api/profile/${type}/game-length`,
+        params
+      );
       if (type === "title") {
         setUnSlicedData(
           result.titles.sort((a, b) => b.avg_game_length - a.avg_game_length)
@@ -704,9 +709,12 @@ function RatingDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/api/rating/${ratingType}/distribution`, {
-        bin_size: 100,
-      });
+      const result = await doApiRequest(
+        `/api/rating/${ratingType}/distribution`,
+        {
+          bin_size: 100,
+        }
+      );
       setData(result.bins);
     })();
   }, [ratingType]);
@@ -1077,9 +1085,12 @@ function NumOpeningByRatingDistributionChart() {
   const [data, setData] = useState([]);
   useEffect(() => {
     (async () => {
-      const result = await doApiRequest(`/api/rating/${ratingType}/num-openings`, {
-        bin_size: 100,
-      });
+      const result = await doApiRequest(
+        `/api/rating/${ratingType}/num-openings`,
+        {
+          bin_size: 100,
+        }
+      );
       setData(result.bins);
     })();
   }, [ratingType]);
@@ -1096,4 +1107,81 @@ export const NumOpeningByRatingDistribution = {
   title: "Opening Count",
   content: <NumOpeningByRatingDistributionChart />,
   group: "Rating",
+};
+
+// function OpeningDistributionChart() {
+//   const [type, setType] = useState("Blitz");
+//   const [data, setData] = useState([]);
+//   const [eloRange, setEloRange] = useState([0, 3000]);
+//   useEffect(() => {
+//     (async () => {
+//       const result = await doApiRequest(`/api/games/MostCommonOpeningsElo`, {
+//         game_type: type,
+//         elo_lower: eloRange[0],
+//         elo_upper: eloRange[1],
+//       });
+//       console.log(result);
+//       setData(result.filter(({ frequency }) => frequency !== 0));
+//     })();
+//   }, [type, eloRange]);
+//   return (
+//     <>
+//       <div style={{ display: "flex" }}>
+//         <GameTypeSelector handleChange={setType} notAll />
+//         <RatingRangeSelector handleChange={setEloRange} />
+//       </div>
+//       <Column data={data} xField="rating_max" yField="num_openings" autoFit />
+//     </>
+//   );
+// }
+
+// export const OpeningDistribution = {
+//   title: "Common Openings",
+//   content: <OpeningDistributionChart />,
+//   group: "Game",
+// };
+
+function BiggestComebacksChart() {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      const result = await doApiRequest(`/api/games/BiggestComebacks`);
+      setData(result.splice(0, 2000));
+    })();
+  }, []);
+  return (
+    <>
+      <div
+        id="scrollableDiv"
+        style={{
+          height: 400,
+          overflow: "auto",
+          padding: "0 16px",
+          border: "1px solid rgba(140, 140, 140, 0.35)",
+        }}
+      >
+        <InfiniteScroll
+          dataLength={data.length}
+          scrollableTarget="scrollableDiv"
+        >
+          <List
+            dataSource={data}
+            renderItem={(item) => (
+              <List.Item key={item.id}>
+                <List.Item.Meta title={item.winner_username} />
+                <div>Biggest win: {item.comeback_deficit}</div>
+              </List.Item>
+            )}
+          />
+        </InfiniteScroll>
+      </div>
+    </>
+  );
+}
+
+export const BiggestComebacks = {
+  title: "Biggest Comebacks",
+  content: <BiggestComebacksChart />,
+  group: "Game",
 };
