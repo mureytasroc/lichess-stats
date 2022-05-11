@@ -637,21 +637,20 @@ function CastlingTypePercentageChart() {
         username,
         ...params,
       });
+      console.log(result);
       setData(
-        result.players.flatMap(
-          ({ username: uname, kingside_percentage, queenside_percentage }) => [
-            {
-              username: uname,
-              value: kingside_percentage,
-              castle_side: "Kingside",
-            },
-            {
-              username: uname,
-              value: queenside_percentage,
-              castle_side: "Queenside",
-            },
-          ]
-        )
+        result.players.flatMap(({ username, RatioKtoQ }) => [
+          {
+            username,
+            value: RatioKtoQ / (1 + RatioKtoQ),
+            castle_side: "Kingside",
+          },
+          {
+            username,
+            value: 1 / (1 + RatioKtoQ),
+            castle_side: "Queenside",
+          },
+        ])
       );
       setLoading(false);
     })();
