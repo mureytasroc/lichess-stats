@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Statistic, List } from "antd";
+import { Statistic, Spin, List } from "antd";
 import { Bar, Column, Heatmap } from "@ant-design/plots";
 import InfiniteScroll from "react-infinite-scroll-component";
 import doApiRequest from "../utils/fetch";
@@ -633,13 +633,10 @@ function CastlingTypePercentageChart() {
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
 
-      const result = await doApiRequest(
-        "/api/games/castling-side-percentages",
-        {
-          username,
-          ...params,
-        }
-      );
+      const result = await doApiRequest("/api/games/RatioKtoQ", {
+        username,
+        ...params,
+      });
       setData(
         result.players.flatMap(
           ({ username: uname, kingside_percentage, queenside_percentage }) => [
@@ -711,7 +708,7 @@ function TimeToWinChart() {
       if (startDay && startDay.length > 0) params.start_date = startDay;
       if (endDay && endDay.length > 0) params.end_date = endDay;
 
-      const result = await doApiRequest("/api/games/avg-time-to-win", {
+      const result = await doApiRequest("/api/games/AvgTimeToWin", {
         username,
         ...params,
       });
